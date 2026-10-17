@@ -56,21 +56,6 @@
     "updated": "2026-10-17"
   },
   {
-    "name": "Sample Season 3",
-    "file": "data/sample_season3.web.json",
-    "state": "new",
-    "rounds": 5,
-    "races": 10,
-    "done": 0,
-    "drivers": 0,
-    "last": "",
-    "last_date": "",
-    "next": "R1  Suzuka  ·  Race 1",
-    "next_date": "2026-03-05",
-    "top": [],
-    "updated": "2026-10-17"
-  },
-  {
     "name": "Sample Season 1",
     "file": "data/sample_season1.web.json",
     "state": "done",
