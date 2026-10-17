@@ -29,9 +29,12 @@ function chip(title, value, color) {
     h("div", { class: "chip-v", style: color ? { color } : null, text: String(value) }));
 }
 
+/* column headings follow their column: centred over centred / number columns, left over names and text */
 function table(heads, rows, cls) {
+  const first = rows.length ? rows[0].children : [];
+  const align = (i) => (first[i] && /(^|\s)[cr](\s|$)/.test(first[i].className) ? "c" : "");
   return h("div", { class: "tablewrap" }, h("table", { class: "dt " + (cls || "") },
-    h("thead", null, h("tr", null, heads.map((x) => h("th", { text: x })))), h("tbody", null, rows)));
+    h("thead", null, h("tr", null, heads.map((x, i) => h("th", { class: align(i), text: x })))), h("tbody", null, rows)));
 }
 
 function td(content, cls, style) { return h("td", { class: cls || "", style: style || null }, content); }
