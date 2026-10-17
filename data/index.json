@@ -1,33 +1,5 @@
 [
   {
-    "name": "Sample Season 2",
-    "file": "data/sample_season2.web.json",
-    "state": "live",
-    "rounds": 5,
-    "races": 10,
-    "done": 4,
-    "drivers": 18,
-    "last": "R2  Oulton Park  ·  Race 2",
-    "last_date": "2026-03-12",
-    "next": "R3  Watkins Glen International  ·  Race 1",
-    "next_date": "2026-03-19",
-    "top": [
-      [
-        "Mina Takeda",
-        71.0
-      ],
-      [
-        "Rafael Okonkwo",
-        51.0
-      ],
-      [
-        "Jules Moreau",
-        50.0
-      ]
-    ],
-    "updated": "2026-10-17"
-  },
-  {
     "name": "Sample Season 3",
     "file": "data/sample_season3.web.json",
     "state": "new",
