@@ -1,6 +1,6 @@
 # AC EVO Championship Viewer
 
-A web page that shows an AC EVO championship exactly as the desktop **AC EVO Championship Manager** does: the standings with coloured result cells, interactive points progression charts, every race with the full lap analysis, round summaries and driver profiles. Dark and light mode, works on phones.
+A web page that shows an web version of the AC EVO championship desktop app **AC EVO Championship Manager** does: the standings with coloured result cells, interactive points progression charts, every race with the full lap analysis, round summaries and driver profiles. Dark and light mode, works on phones.
 
 It is a **viewer**. Importing results, editing, penalties and scoring all stay in the desktop program; this page only shows what you export from it.
 
