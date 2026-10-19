@@ -41,9 +41,23 @@ function viewStandings() {
     hideStats = !hideStats; setPref("hide_stats", hideStats ? "1" : "0"); applyLayout(); } });
   const widthSlider = h("input", { type: "range", min: 64, max: 130, value: raceW, "aria-label": "Race column width", title: "Width of every race column", oninput: () => {
     raceW = +widthSlider.value; setPref("race_col_w", String(raceW)); applyLayout(); } });
+  let nameW = +pref("name_col_w", 0) || 0;       // 0 = the default width of the Driver column
+  function nameResizer() {                   // drag the right edge of the Driver heading; double-click puts it back
+    const grip = h("span", { class: "grip", title: "Drag to change the width of this column (double-click: back to normal)",
+      ondblclick: () => { nameW = 0; setPref("name_col_w", "0"); applyLayout(); } });
+    grip.addEventListener("pointerdown", (e) => {
+      e.preventDefault(); grip.setPointerCapture(e.pointerId);
+      const x0 = e.clientX, w0 = grip.parentElement.getBoundingClientRect().width;
+      const move = (ev) => { nameW = Math.round(Math.min(420, Math.max(110, w0 + ev.clientX - x0))); applyLayout(); };
+      const up = () => { grip.removeEventListener("pointermove", move); grip.removeEventListener("pointerup", up); setPref("name_col_w", String(nameW)); };
+      grip.addEventListener("pointermove", move); grip.addEventListener("pointerup", up);
+    });
+    return grip;
+  }
   function applyLayout() {                    // one width for every race column, and the stats columns on or off
     statsToggle.textContent = hideStats ? "Show stats columns" : "Hide stats columns";
     holder.style.setProperty("--rw", raceW + "px");
+    if (nameW) holder.style.setProperty("--dw", nameW + "px"); else holder.style.removeProperty("--dw");
     holder.classList.toggle("nostats", hideStats);
   }
   root.append(h("div", { class: "toolbar" }, h("div", { class: "grow" }, h("h2", { class: "ph", text: d.name }), h("div", { class: "sub", text: standingsSub(st, team) })),
@@ -63,7 +77,7 @@ function viewStandings() {
       if (g && g.round === c.round) g.cols.push(ci); else groups.push({ round: c.round, cols: [ci] });
     });
     const roundDone = (g) => g.cols.some((ci) => d.cols[ci].done);
-    const r1 = h("tr", null, h("th", { rowspan: 2, class: "sticky c0", text: "Pos" }), h("th", { rowspan: 2, class: "sticky c1", text: t ? "Team" : "Driver" }),
+    const r1 = h("tr", null, h("th", { rowspan: 2, class: "sticky c0", text: "Pos" }), h("th", { rowspan: 2, class: "sticky c1" }, t ? "Team" : "Driver", nameResizer()),
       groups.map((g) => {
         const rd = d.rounds[g.round], act = roundDone(g);
         return h("th", { colspan: g.cols.length, class: "rh" + (act ? " act" : ""), title: act ? "Open the round summary" : "",

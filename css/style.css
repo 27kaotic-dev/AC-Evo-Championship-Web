@@ -122,7 +122,12 @@ table.st { border-collapse: separate; border-spacing: 0; min-width: 100%; }
 .st .sticky { position: sticky; z-index: 4; background: var(--panel); }
 .st th.sticky { z-index: 6; background: var(--panel2); }
 .st .c0 { left: 0; min-width: 54px; width: 54px; }
-.st .c1 { left: 54px; min-width: 210px; box-shadow: 1px 0 0 var(--border); }
+.st .c1 { left: 54px; width: var(--dw, 210px); min-width: var(--dw, 210px); max-width: var(--dw, 210px); box-shadow: 1px 0 0 var(--border); overflow: hidden; }
+.st th.c1 { position: sticky; }
+.st th.c1 .grip { position: absolute; top: 0; right: 0; width: 7px; height: 100%; cursor: col-resize; touch-action: none; }
+.st th.c1 .grip:hover { background: var(--accent); opacity: .6; }
+.st td.nm .nt { min-width: 0; max-width: calc(var(--dw, 210px) - 56px); }
+.st td.nm .nt b, .st td.nm .nt small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .st td.rank { text-align: center; }
 .rk { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; font-weight: 800; color: var(--dim); }
 .rk.m1, .rk.m2, .rk.m3 { color: var(--medal-ink); }
@@ -162,7 +167,7 @@ td.link:hover .cell { border-color: var(--cell-edge); }
   main { padding: 0 8px 16px; } .tabs { padding: 10px 8px 0; }
   .tab { padding: 9px 13px; } .page { padding: 10px 8px 14px; }
   .ph { font-size: 19px; }
-  .st .c0 { min-width: 44px; width: 44px; } .st .c1 { left: 44px; min-width: 128px; }
+  .st .c0 { min-width: 44px; width: 44px; } .st .c1 { left: 44px; width: var(--dw, 128px); min-width: var(--dw, 128px); max-width: var(--dw, 128px); }
   .st td.nm .nt b { font-size: 13.5px; } .st td.nm .bar.big { margin: 0 6px 0 2px; }
   .brand .app { font-size: 13.5px; } .brand .cname { max-width: 40vw; }
   .chip { padding: 6px 10px; } .chip-v { font-size: 15px; }
