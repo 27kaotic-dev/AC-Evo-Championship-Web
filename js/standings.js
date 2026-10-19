@@ -5,7 +5,8 @@ function standingsSub(st, team) {
   const d = S.data;
   const done = d.scored.length, all = d.cols.length;
   const drop = d.drop_worst ? `  ·  best results count (worst ${d.drop_worst} dropped)` : "";
-  return `${done} of ${all} races completed  ·  ${st.length} ${team ? "teams" : "drivers"}${drop}`;
+  const best = team && d.team_best_n ? `  ·  the best ${d.team_best_n} drivers of a team score in each race` : "";
+  return `${done} of ${all} races completed  ·  ${st.length} ${team ? "teams" : "drivers"}${drop}${best}`;
 }
 
 function resultCell(c, onclick) {
@@ -33,9 +34,22 @@ function viewStandings() {
   const modeSel = h("select", { "aria-label": "View", onchange: () => { S.mode = modeSel.value; render(); } },
     option("drivers", "Drivers", !team), option("teams", "Teams", team));
   const holder = h("div");
+  const pref = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } };
+  const setPref = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage blocked */ } };
+  let hideStats = pref("hide_stats", "0") === "1", raceW = Math.min(130, Math.max(64, +pref("race_col_w", 96) || 96));
+  const statsToggle = h("button", { class: "btn", type: "button", title: "Hide the Wins, Podiums, Poles, FL and ML columns to make room for more races", onclick: () => {
+    hideStats = !hideStats; setPref("hide_stats", hideStats ? "1" : "0"); applyLayout(); } });
+  const widthSlider = h("input", { type: "range", min: 64, max: 130, value: raceW, "aria-label": "Race column width", title: "Width of every race column", oninput: () => {
+    raceW = +widthSlider.value; setPref("race_col_w", String(raceW)); applyLayout(); } });
+  function applyLayout() {                    // one width for every race column, and the stats columns on or off
+    statsToggle.textContent = hideStats ? "Show stats columns" : "Hide stats columns";
+    holder.style.setProperty("--rw", raceW + "px");
+    holder.classList.toggle("nostats", hideStats);
+  }
   root.append(h("div", { class: "toolbar" }, h("div", { class: "grow" }, h("h2", { class: "ph", text: d.name }), h("div", { class: "sub", text: standingsSub(st, team) })),
-    field("View:", modeSel), h("button", { class: "btn", type: "button", text: "Export CSV", onclick: () => exportStandingsCsv() })), holder,
-    h("div", { class: "hint", text: "Click the round name (top of a column) for the round summary  ·  click a race name for that race's full results  ·  click a driver for their profile  ·  click a result cell for that driver's race.   FL = fastest lap   PP = pole position   ML = most laps led" }));
+    field("View:", modeSel), statsToggle, field("Race width:", widthSlider), h("button", { class: "btn", type: "button", text: "Export CSV", onclick: () => exportStandingsCsv() }),
+    discordButton(() => textStandings(S.data, S.mode))), holder,
+    h("div", { class: "hint", text: "Click the round name (top of a column) for the round summary  ·  click a race name for that race's full results  ·  click a driver for their profile  ·  click a result cell for that driver's race.   FL = fastest lap   PP = pole position   ML = most laps led   LP = licence points" }));
 
   function render() {
     const t = S.mode === "teams", rows = d.standings[S.mode];
@@ -53,23 +67,27 @@ function viewStandings() {
       groups.map((g) => {
         const rd = d.rounds[g.round], act = roundDone(g);
         return h("th", { colspan: g.cols.length, class: "rh" + (act ? " act" : ""), title: act ? "Open the round summary" : "",
-          onclick: act ? () => openRound(g.round) : null, text: `R${g.round + 1}  ·  ${roundTrack(rd)}` });
+          onclick: act ? () => openRound(g.round) : null }, h("div", { class: "rno", text: `R${g.round + 1}` }), h("div", { text: roundTrack(rd) }));
       }),
-      h("th", { rowspan: 2, class: "tot", text: "Points" }), ["Wins", "Podiums", "Poles", "FL"].map((x) => h("th", { rowspan: 2, class: "stat", text: x })));
+      h("th", { rowspan: 2, class: "tot", text: "Points" }), ["Wins", "Podiums", "Poles", "FL", "ML"].map((x) => h("th", { rowspan: 2, class: "stat", text: x })));
     const r2 = h("tr", null, d.cols.map((c) => h("th", { class: "rn" + (c.done ? " act" : ""), title: c.done ? "Open this race's results" : "",
       onclick: c.done ? () => openRace(c.race) : null, text: c.name })));
+    const lp = {};
+    if (!t) for (const x of licenceRows(d)) if (x.points > 0) lp[x.d] = x.points;
     const body = rows.map((r) => {
-      const sub = t ? "" : [r.number ? "#" + r.number : "", r.team].filter(Boolean).join(" ");
+      const sub = t ? (r.members || []).join(", ") : [r.number ? "#" + r.number : "", r.team].filter(Boolean).join(" ");
       const mc = medalClass(r.rank);
       return h("tr", null,
         h("td", { class: "sticky c0 rank" }, h("span", { class: "rk " + mc, text: String(r.rank) })),
         h("td", { class: "sticky c1 nm" + (t ? "" : " link"), onclick: t ? null : () => openDriver(r.id) },
-          h("span", { class: "bar big", style: { background: safeColor(r.color) } }), h("span", { class: "nt" }, h("b", { text: r.name }), sub ? h("small", { text: sub }) : null)),
+          h("span", { class: "bar big", style: { background: safeColor(r.color) } }), h("span", { class: "nt" }, h("b", { text: r.name }), sub ? h("small", { text: sub }) : null),
+          lp[r.id] ? h("span", { class: "lp", title: "Licence points", text: `LP ${lp[r.id]}` }) : null),
         d.cols.map((c, ci) => resultCell(r.cells[String(ci)], c.done && r.cells[String(ci)] ? () => openRace(c.race, t ? null : r.id) : null)),
         h("td", { class: "tot" }, h("div", { class: "total", title: r.cpen ? `Includes ${fmtPts(r.cpen)} pts championship penalty` : null, text: fmtPts(r.total) })),
-        ["wins", "podiums", "poles", "fls"].map((k) => h("td", { class: "stat " + (r[k] ? "" : "dim"), text: r[k] ? String(r[k]) : "-" })));
+        ["wins", "podiums", "poles", "fls", "mls"].map((k) => h("td", { class: "stat " + (r[k] ? "" : "dim"), text: r[k] ? String(r[k]) : "-" })));
     });
     holder.append(h("div", { class: "tablewrap standings" }, h("table", { class: "st" }, h("thead", null, r1, r2), h("tbody", null, body))));
+    applyLayout();
   }
   S.renderStandings = render;
   render();
@@ -85,7 +103,7 @@ function openRound(roundIndex) {
 
 function exportStandingsCsv() {
   const d = S.data, team = S.mode === "teams", st = d.standings[S.mode];
-  const head = ["Pos", "Name", "Team", ...d.cols.map((c) => `${roundTrack(d.rounds[c.round])} ${c.name}`), "Points", "Wins", "Podiums", "Poles", "Fastest laps"];
+  const head = ["Pos", "Name", "Team", ...d.cols.map((c) => `${roundTrack(d.rounds[c.round])} ${c.name}`), "Points", "Wins", "Podiums", "Poles", "Fastest laps", "Most laps led"];
   const out = [head];
   for (const r of st) {
     const row = [r.rank, r.name, team ? "" : r.team];
@@ -93,7 +111,7 @@ function exportStandingsCsv() {
       const x = r.cells[String(ci)];
       row.push(!x ? "" : (x.pos ? `P${x.pos} / ${fmtPts(x.pts)}` : `${x.status} / ${fmtPts(x.pts)}`));
     });
-    out.push([...row, fmtPts(r.total), r.wins, r.podiums, r.poles, r.fls]);
+    out.push([...row, fmtPts(r.total), r.wins, r.podiums, r.poles, r.fls, r.mls || 0]);
   }
   const q = (v) => { v = String(v); return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
   download(slug(d.name + (team ? "_team_standings" : "_standings")) + ".csv", new Blob(["﻿" + out.map((r) => r.map(q).join(",")).join("\r\n") + "\r\n"], { type: "text/csv;charset=utf-8" }));

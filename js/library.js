@@ -18,7 +18,8 @@ function libCard(c) {
     h("span", { class: "stripe", style: { background: color } }),
     h("div", { class: "lc-main" },
       h("div", { class: "lc-head" }, h("span", { class: "lc-name", text: c.name }),
-        text ? h("span", { class: "badge", style: { color, borderColor: color }, text }) : null),
+        text ? h("span", { class: "badge", style: { color, borderColor: color }, text }) : null,
+        c.archived ? h("span", { class: "badge", style: { color: cssVar("--dim"), borderColor: cssVar("--dim") }, text: "ARCHIVED", title: "Not in the library list, but counted on the Stats page" }) : null),
       h("div", { class: "dim small", text: c.file.split("/").pop() + (current ? "   ·   open now" : "") + (c.updated ? "   ·   updated " + c.updated : "") }),
       hasInfo ? [h("div", { class: "bar-track" }, h("div", { class: "bar-fill", style: { width: (c.races ? (100 * c.done) / c.races : 0) + "%", background: color } })),
         h("div", { class: "dim", text: `${c.done} of ${c.races} races  ·  ${c.rounds} rounds  ·  ${c.drivers} drivers` })] : null),
@@ -29,24 +30,28 @@ function libCard(c) {
 
 function viewLibrary() {
   const root = h("div", { class: "page" });
-  const all = S.library;
-  let showDone = true;
-  try { showDone = localStorage.getItem("show_finished") !== "0"; } catch (e) { /* storage blocked */ }
-  const n = (k) => all.filter((c) => c.state === k).length;
-  const chk = h("input", { type: "checkbox", checked: showDone, onchange: () => { try { localStorage.setItem("show_finished", chk.checked ? "1" : "0"); } catch (e) { /* ignore */ } fill(); } });
+  const everything = S.library, nArch = everything.filter((c) => c.archived).length;
+  const stored = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v === "1"; } catch (e) { return d; } };
+  const store = (k, on) => { try { localStorage.setItem(k, on ? "1" : "0"); } catch (e) { /* storage blocked */ } };
+  const chk = h("input", { type: "checkbox", checked: stored("show_finished", true), onchange: () => { store("show_finished", chk.checked); fill(); } });
+  const chkA = h("input", { type: "checkbox", checked: stored("show_archived", false), onchange: () => { store("show_archived", chkA.checked); fill(); } });
   const sub = h("div", { class: "sub" });
   const list = h("div", { class: "liblist" });
   root.append(h("div", { class: "toolbar" }, h("div", { class: "grow" }, h("h2", { class: "ph", text: "Champ Library" }), sub),
-    h("label", { class: "check" }, chk, "Show finished championships")), list,
-    h("div", { class: "hint", text: "Click a championship to open it. Past seasons stay here: each one is a file in the site's data folder." }));
+    h("label", { class: "check" }, chk, "Show finished championships"),
+    nArch ? h("label", { class: "check" }, chkA, "Show archived championships") : null), list,
+  h("div", { class: "hint", text: "Click a championship to open it. Past seasons stay here: each one is a file in the site's data folder." +
+    (nArch ? ` ${nArch} archived championship${nArch !== 1 ? "s are" : " is"} kept out of this list but still counted on the Stats page.` : "") }));
   function fill() {
-    const shown = all.filter((c) => chk.checked || c.state !== "done");
+    const all = everything.filter((c) => !c.archived), n = (k) => all.filter((c) => c.state === k).length;
+    const shown = everything.filter((c) => (chkA.checked || !c.archived) && (chk.checked || c.state !== "done"));
     const bits = [`${n("live")} live`];
     if (n("new")) bits.push(`${n("new")} not started`);
     bits.push(`${n("done")} finished` + (chk.checked || !n("done") ? "" : " (hidden)"));
+    if (nArch) bits.push(`${nArch} archived` + (chkA.checked ? "" : " (hidden)"));
     sub.textContent = bits.join("  ·  ");
     clear(list);
-    if (!shown.length) list.append(h("div", { class: "empty", text: all.length ? "Everything is finished. Tick “Show finished championships” to see them." : "No championships yet." }));
+    if (!shown.length) list.append(h("div", { class: "empty", text: everything.length ? "Everything is finished or archived. Tick “Show finished championships” to see them." : "No championships yet." }));
     shown.forEach((c) => list.append(libCard(c)));
   }
   fill();

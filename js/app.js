@@ -2,10 +2,14 @@
 /* AC EVO Championship Viewer: loads a championship exported from the desktop program (File > Export for the web
    viewer) and shows it.  Read-only: all editing happens in the desktop program. */
 
-const S = { data: null, drv: {}, races: {}, mode: "drivers", tab: "standings", sel: null, focus: null, prog: { by: "points", top: 16 }, library: [] };
-const VIEW_TABS = [["standings", "Standings"], ["progress", "Points progression"], ["races", "Race results"]];
-/* the Champ Library tab (when there is more than one championship to choose from) and, once one is open, its pages */
-function tabList() { return [...(S.library.length > 1 ? [["library", "Champ Library"]] : []), ...(S.data ? VIEW_TABS : [])]; }
+const S = { data: null, drv: {}, races: {}, mode: "drivers", tab: "standings", sel: null, focus: null, prog: { by: "points", top: 16 }, library: [],
+  recCache: {}, stats: null, statsTab: 0 };
+const VIEW_TABS = [["standings", "Standings"], ["progress", "Points progression"], ["races", "Race results"], ["licence", "Licence"]];
+/* the Champ Library tab (when there is more than one championship to choose from), Stats (all of them together) and, once one is open, its pages */
+function tabList() {
+  const live = S.library.filter((c) => !c.archived);
+  return [...(live.length > 1 ? [["library", "Champ Library"]] : []), ...(S.library.length || S.data ? [["stats", "Stats & Records"]] : []), ...(S.data ? VIEW_TABS : [])];
+}
 
 /* ---------------------------------------------------------------- theme */
 function getTheme() {
@@ -41,7 +45,7 @@ function renderAll() {
     h("div", { class: "brand" }, h("img", { src: "icon.svg", alt: "", width: 30, height: 30 }), h("div", null, h("div", { class: "app", text: "AC EVO Championship Viewer" }), h("div", { class: "cname", text: d ? d.name : "" }))),
     h("div", { class: "grow" }), h("button", { class: "btn", type: "button", text: "Open file…", title: "Show a championship file exported from the desktop program", onclick: () => file.click() }), file, themeToggle());
   const tabs = tabList();
-  const nav = h("nav", { class: "tabs", role: "tablist" }, tabs.map(([id, label]) => h("button", { class: "tab" + (S.tab === id ? " on" : ""), type: "button", role: "tab",
+  const nav = h("nav", { class: "tabs", role: "tablist" }, tabs.map(([id, label]) => h("button", { class: "tab" + (S.tab === id ? " on" : "") + (id === "standings" ? " sep" : ""), type: "button", role: "tab",
     "aria-selected": S.tab === id, onclick: () => setTab(id), text: label })));
   const main = h("main", { id: "view" });
   app.append(bar, tabs.length ? nav : null, main, h("footer", { class: "foot" }, "Read-only viewer. Made with the AC EVO Championship Manager."));
@@ -53,7 +57,8 @@ function renderView() {
   clear(main);
   const ids = tabList().map((t) => t[0]);
   if (!ids.includes(S.tab)) S.tab = ids[0];
-  main.append(S.tab === "library" ? viewLibrary() : S.tab === "progress" ? viewProgress() : S.tab === "races" ? viewRaces() : viewStandings());
+  const views = { library: viewLibrary, stats: viewStats, progress: viewProgress, races: viewRaces, licence: viewLicence, standings: viewStandings };
+  main.append(views[S.tab]());
   document.querySelectorAll(".tabs .tab").forEach((b, i) => { const on = ids[i] === S.tab; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
 }
 
@@ -85,7 +90,9 @@ async function loadUrl(url) {
     const res = await fetch(url, { cache: "no-cache" });
     if (!res.ok) throw new Error(`Could not load ${url} (${res.status})`);
     S.current = url;
-    useData(await res.json());
+    const data = await res.json();
+    useData(data);
+    S.recCache[url] = champRecord(data, url.split("/").pop());       // the stats pages can use it without loading it again
   } catch (e) { showError(e); }
 }
 
@@ -122,7 +129,7 @@ async function boot() {
   const want = new URLSearchParams(location.search).get("c");
   const wanted = S.library.find((c) => c.file === want || c.file.split("/").pop() === want);
   if (wanted) await loadUrl(wanted.file);                 // a link to one championship
-  else if (S.library.length === 1) await loadUrl(S.library[0].file);   // nothing to choose from
+  else if (S.library.filter((c) => !c.archived).length === 1) await loadUrl(S.library.find((c) => !c.archived).file);   // nothing to choose from
   else { S.tab = "library"; renderAll(); }                // the library
 }
 boot();

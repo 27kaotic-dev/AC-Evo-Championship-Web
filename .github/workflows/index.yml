@@ -4,7 +4,7 @@ name: Rebuild the championship list
 on:
   push:
     branches: [main]
-    paths: ["data/*.web.json"]
+    paths: ["data/*.web.json", "data/archive/*.web.json"]
 
 permissions:
   contents: write

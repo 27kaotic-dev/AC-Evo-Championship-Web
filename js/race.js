@@ -202,7 +202,7 @@ function raceView(race, focusId) {
   const rd = roundOf(race), calc = race.rows;
   const rowOf = (id) => calc.find((r) => r.d === id);
   const head = h("h2", { class: "ph", text: `Round ${race.round + 1}  ·  ${roundTrack(rd)}  ·  ${race.name}` });
-  const bits = [rd.date, `scoring: ${race.preset}`, `source: ${race.source || "manual"}`].filter(Boolean);
+  const bits = [rd.date, race.weather ? `weather: ${race.weather}` : "", `scoring: ${race.preset}`, `source: ${race.source || "manual"}`].filter(Boolean);
   const chips = h("div", { class: "chips" });
   const win = race.leader ? rowOf(race.leader) : null;
   if (win) chips.append(chip("Winner", driverName(race.leader), cssVar("--gold")));
@@ -271,7 +271,8 @@ function sessionInfo(race) {
 }
 
 /* ---------------------------------------------------------------- a round with all its races side by side */
-function roundView(rd, rdIndex) {
+/* the races of a round that have results, and every driver of them with their results and round total */
+function roundData(rd) {
   const races = rd.races.map((id) => S.races[id]).filter(Boolean);
   const agg = new Map();
   races.forEach((race, n) => {
@@ -295,6 +296,11 @@ function roundView(rd, rdIndex) {
     return A[2] < B[2] ? -1 : A[2] > B[2] ? 1 : 0;
   });
   const gbest = Math.min(...list.map((a) => a.best).filter((b) => b > 0), Infinity);
+  return { races, list, gbest };
+}
+
+function roundView(rd, rdIndex) {
+  const { races, list, gbest } = roundData(rd);
   const presets = [...new Set(races.map((r) => r.preset))].sort();
   const bits = [rd.date, `${races.length} of ${rd.races.length} races`, "scoring: " + presets.join(", ")].filter(Boolean);
   const chips = h("div", { class: "chips" });
@@ -363,7 +369,10 @@ function viewRaces() {
     h("button", { class: "btn", type: "button", text: "Export CSV", title: "Save the table that is showing as CSV", onclick: () => {
       const t = holder.querySelector(".pane:not([hidden]) table") || holder.querySelector("table");
       if (t) downloadCsv(slug(S.data.name + "_" + sel.options[sel.selectedIndex].text), t);
-    } })), holder);
+    } }), discordButton(() => {
+      const [kind, ...rest] = S.sel.split(":"), ident = rest.join(":");
+      return kind === "race" ? (S.races[ident] ? textRace(S.races[ident]) : "") : textRound(+ident);
+    })), holder);
   render();
   return root;
 }

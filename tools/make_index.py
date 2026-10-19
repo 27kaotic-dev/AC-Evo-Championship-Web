@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Rebuilds data/index.json from the *.web.json files in data/, so a new championship only needs its file
-dropped into the data folder.  Run it from anywhere:
+"""Rebuilds data/index.json from the *.web.json files in data/ (and data/archive/), so a new championship only needs
+its file dropped into the data folder.  A file moved into data/archive/ leaves the library list but stays in the
+statistics.  Run it from anywhere:
 
     python tools/make_index.py
 
@@ -13,9 +14,10 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(os.path.dirname(HERE), "data")
+ARCHIVE = os.path.join(DATA, "archive")      # championships that are kept for the Stats page but not listed in the library
 
 
-def summary(d, rel):
+def summary(d, rel, archived=False):
     cols, rounds = d["cols"], d["rounds"]
     done = [c for c in cols if c["done"]]
     todo = [c for c in cols if not c["done"]]
@@ -30,25 +32,26 @@ def summary(d, rel):
     nxt, next_date = label(todo[0]) if todo else ("", "")
     return dict(name=d["name"], file=rel, state=state, rounds=len(rounds), races=len(cols), done=len(done),
                 drivers=len(rows), last=last, last_date=last_date, next=nxt, next_date=next_date,
-                top=[[r["name"], r["total"]] for r in rows[:3]], updated=(d.get("generated") or "")[:10])
+                top=[[r["name"], r["total"]] for r in rows[:3]], updated=(d.get("generated") or "")[:10], archived=archived)
 
 
 def main():
     out = []
-    for path in sorted(glob.glob(os.path.join(DATA, "*.web.json"))):
-        rel = "data/" + os.path.basename(path)
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                d = json.load(f)
-            if d.get("format") != 1:
-                raise ValueError("not a web viewer export")
-            out.append(summary(d, rel))
-        except (OSError, ValueError, KeyError, TypeError) as ex:
-            print(f"skipped {rel}: {ex}", file=sys.stderr)
+    for folder, prefix, archived in ((DATA, "data/", False), (ARCHIVE, "data/archive/", True)):
+        for path in sorted(glob.glob(os.path.join(folder, "*.web.json"))):
+            rel = prefix + os.path.basename(path)
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    d = json.load(f)
+                if d.get("format") != 1:
+                    raise ValueError("not a web viewer export")
+                out.append(summary(d, rel, archived))
+            except (OSError, ValueError, KeyError, TypeError) as ex:
+                print(f"skipped {rel}: {ex}", file=sys.stderr)
     rank = {"live": 0, "new": 1, "done": 2}
-    # live first, then not started, then finished; the most recently exported first inside each group
+    # live first, then not started, then finished, then the archived ones; the most recently exported first inside each group
     out.sort(key=lambda e: e["updated"], reverse=True)
-    out.sort(key=lambda e: rank[e["state"]])
+    out.sort(key=lambda e: (e["archived"], rank[e["state"]]))
     text = json.dumps(out, indent=2, ensure_ascii=False) + "\n"
     target = os.path.join(DATA, "index.json")
     try:

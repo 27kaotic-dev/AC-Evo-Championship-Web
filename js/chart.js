@@ -249,3 +249,210 @@ function chartBox(height = 460) {
   const cv = h("canvas", { class: "chart", style: { height: height + "px" } });
   return { cv, chart: new LineChart(cv) };
 }
+
+/* Horizontal bars: the label on the left, the value after the bar; hover a bar for its details.
+   items = [{ label, value, color, tip: [line, line ...] }] */
+class BarChart {
+  constructor(canvas) {
+    this.cv = canvas; this.items = []; this.hover = null; this.mouse = null; this.empty = "No data yet";
+    canvas._chart = this;
+    canvas.addEventListener("pointermove", (e) => this.onMove(e));
+    canvas.addEventListener("pointerdown", (e) => this.onMove(e));
+    canvas.addEventListener("pointerleave", () => { this.hover = null; this.draw(); });
+    canvas.style.touchAction = "pan-y";
+    if (window.ResizeObserver) new ResizeObserver(() => this.draw()).observe(canvas);
+  }
+
+  setData(items, empty) {
+    this.items = items; this.hover = null; this.empty = empty || "No data yet";
+    this.cv.style.height = Math.max(70, 16 + BarChart.ROW * items.length) + "px";
+    this.draw();
+  }
+
+  draw() {
+    const cv = this.cv, dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+    if (!W || !H) return;
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    const g = cv.getContext("2d");
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const C = { panel: cssVar("--panel"), text: cssVar("--text"), dim: cssVar("--dim"), hover: cssVar("--row-hover"), tip: cssVar("--tip-bg"), hi: cssVar("--hi") };
+    g.fillStyle = C.panel; g.fillRect(0, 0, W, H);
+    g.font = "13px 'Segoe UI', system-ui, sans-serif"; g.textBaseline = "middle";
+    if (!this.items.length) { g.fillStyle = C.dim; g.textAlign = "center"; g.fillText(this.empty, W / 2, H / 2); return; }
+    const narrow = W < 560, lw = Math.min(narrow ? 130 : 280, Math.max(...this.items.map((i) => g.measureText(i.label).width)) + 16);
+    const vmax = Math.max(...this.items.map((i) => i.value)) || 1, bx0 = lw + 18, bx1 = Math.max(lw + 40, W - 56);
+    this.items.forEach((it, n) => {
+      const y = 8 + n * BarChart.ROW, mid = y + (BarChart.ROW - 2) / 2;
+      if (n === this.hover) { g.fillStyle = C.hover; g.beginPath(); g.roundRect(6, y, W - 12, BarChart.ROW - 2, 6); g.fill(); }
+      g.fillStyle = C.text; g.textAlign = "left"; g.fillText(this.elide(g, it.label, lw), 12, mid);
+      const w = Math.max(2, ((bx1 - bx0) * it.value) / vmax);
+      g.globalAlpha = this.hover !== null && n !== this.hover ? 0.59 : 1;
+      g.fillStyle = safeColor(it.color); g.beginPath(); g.roundRect(bx0, y + 5, w, BarChart.ROW - 12, 4); g.fill();
+      g.globalAlpha = 1;
+      g.fillStyle = n === this.hover ? C.text : C.dim; g.fillText(fmtPts(it.value), bx0 + w + 8, mid);
+    });
+    if (this.hover !== null && this.mouse) {
+      const lines = this.items[this.hover].tip || [];
+      if (lines.length) {
+        g.font = "bold 12px 'Segoe UI', system-ui, sans-serif";
+        const w = Math.max(...lines.map((l, i) => { g.font = `${i ? "" : "bold "}12px 'Segoe UI', system-ui, sans-serif`; return g.measureText(l).width; })) + 20, h = lines.length * 18 + 12;
+        const x = this.mouse.x + 14 + w < W ? this.mouse.x + 14 : this.mouse.x - 14 - w, y = Math.max(4, Math.min(H - h - 4, this.mouse.y - h / 2));
+        g.fillStyle = C.tip; g.strokeStyle = safeColor(this.items[this.hover].color); g.lineWidth = 1.4;
+        g.beginPath(); g.roundRect(x, y, w, h, 7); g.fill(); g.stroke();
+        lines.forEach((l, i) => { g.font = `${i ? "" : "bold "}12px 'Segoe UI', system-ui, sans-serif`; g.fillStyle = i ? C.text : safeColor(this.items[this.hover].color); g.textAlign = "left"; g.fillText(l, x + 10, y + 16 + i * 18); });
+      }
+    }
+  }
+
+  elide(g, text, maxW) {
+    if (g.measureText(text).width <= maxW) return text;
+    let s = text;
+    while (s.length > 1 && g.measureText(s + "…").width > maxW) s = s.slice(0, -1);
+    return s + "…";
+  }
+
+  onMove(e) {
+    const r = this.cv.getBoundingClientRect(), y = e.clientY - r.top, n = Math.floor((y - 8) / BarChart.ROW);
+    this.hover = n >= 0 && n < this.items.length ? n : null;
+    this.mouse = { x: e.clientX - r.left, y };
+    this.cv.style.cursor = this.hover !== null ? "pointer" : "default";
+    this.draw();
+  }
+}
+BarChart.ROW = 28;
+
+function barBox() {
+  const cv = h("canvas", { class: "chart bars" });
+  return { cv, chart: new BarChart(cv) };
+}
+
+/* A donut with its key.  Hover a slice or a name in the key to see it.
+   items = [{ label, value, color, tip: [line, ...] }], centre = [big text, small text] */
+const PIE_COLORS = ["#ff3d4f", "#4da3ff", "#ffc83d", "#3ddc84", "#b061ff", "#ff8a3d", "#2fd6d6", "#ff6bb5", "#9ad14b", "#7d8cff",
+  "#e0c36a", "#5ee0b0", "#d96b6b", "#6bb5d9", "#c28cff", "#ffa94d"];
+
+function sliceColor(i) {
+  const c = PIE_COLORS[i % PIE_COLORS.length];
+  if (i < PIE_COLORS.length) return c;
+  const n = parseInt(c.slice(1), 16);                          // after one round of the palette: the same colours, darker
+  const f = (v) => Math.round(v * 0.75);
+  return "#" + [f((n >> 16) & 255), f((n >> 8) & 255), f(n & 255)].map((v) => v.toString(16).padStart(2, "0")).join("");
+}
+
+class PieChart {
+  constructor(canvas) {
+    this.cv = canvas; this.items = []; this.hover = null; this.mouse = null; this.centre = ["", ""]; this.empty = "No data yet";
+    canvas._chart = this;
+    canvas.addEventListener("pointermove", (e) => this.onMove(e));
+    canvas.addEventListener("pointerdown", (e) => this.onMove(e));
+    canvas.addEventListener("pointerleave", () => { this.hover = null; this.draw(); });
+    canvas.style.touchAction = "pan-y";
+    if (window.ResizeObserver) new ResizeObserver(() => this.draw()).observe(canvas);
+  }
+
+  setData(items, centre, empty) {
+    this.items = items; this.centre = centre || ["", ""]; this.hover = null; this.empty = empty || "No data yet";
+    this.draw();
+  }
+
+  /* where everything goes; wide: the key beside the donut, narrow: below it */
+  geo() {
+    const W = this.cv.clientWidth, n = this.items.length, narrow = W < 600;
+    if (narrow) {
+      const side = Math.max(140, Math.min(W - 40, 280));
+      return { W, narrow, cx: W / 2, cy: 18 + side / 2, R: side / 2, lx: 16, ly: 18 + side + 20, kw: W - 32, H: 18 + side + 20 + n * PieChart.ROW + 14 };
+    }
+    const side = 280, cx = 22 + side / 2, lx = cx + side / 2 + 36;
+    return { W, narrow, cx, cy: Math.max(150, (30 + n * PieChart.ROW) / 2 + 6), R: side / 2, lx, ly: 0, kw: Math.min(440, W - lx - 14), H: Math.max(300, 30 + n * PieChart.ROW) };
+  }
+
+  draw() {
+    const cv = this.cv, W = cv.clientWidth;
+    if (!W) return;
+    const g0 = this.geo(), need = this.items.length ? g0.H : 140;
+    if (Math.abs(cv.clientHeight - need) > 1) { cv.style.height = need + "px"; return; }      // the resize observer draws again
+    const dpr = window.devicePixelRatio || 1, H = cv.clientHeight;
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    const g = cv.getContext("2d");
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const C = { panel: cssVar("--panel"), panel2: cssVar("--panel2"), text: cssVar("--text"), dim: cssVar("--dim"), hover: cssVar("--row-hover"), tip: cssVar("--tip-bg") };
+    g.fillStyle = C.panel; g.fillRect(0, 0, W, H);
+    const total = this.items.reduce((s, i) => s + i.value, 0);
+    if (!total) { g.fillStyle = C.dim; g.font = "13px 'Segoe UI', system-ui, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(this.empty, W / 2, H / 2); return; }
+    const { cx, cy, R, lx, ly, kw, narrow } = g0, r = R * 0.58;
+    let a = -Math.PI / 2;
+    this.items.forEach((it, n) => {
+      const span = (2 * Math.PI * it.value) / total;
+      if (span <= 0) return;
+      const mid = a + span / 2, off = n === this.hover ? 7 : 0;
+      g.save(); g.translate(Math.cos(mid) * off, Math.sin(mid) * off);
+      g.beginPath(); g.arc(cx, cy, R, a, a + span); g.arc(cx, cy, r, a + span, a, true); g.closePath();
+      g.globalAlpha = this.hover !== null && n !== this.hover ? 0.65 : 1;
+      g.fillStyle = safeColor(it.color); g.fill();
+      g.globalAlpha = 1; g.lineWidth = 2; g.strokeStyle = C.panel; g.stroke();
+      g.restore();
+      a += span;
+    });
+    g.textAlign = "center"; g.textBaseline = "middle"; g.fillStyle = C.text; g.font = "bold 22px 'Segoe UI', system-ui, sans-serif"; g.fillText(String(this.centre[0]), cx, cy - 8);
+    g.fillStyle = C.dim; g.font = "12px 'Segoe UI', system-ui, sans-serif"; g.fillText(String(this.centre[1]), cx, cy + 14);
+    // the key
+    g.font = "13px 'Segoe UI', system-ui, sans-serif"; g.textAlign = "left";
+    const y0 = narrow ? ly : Math.max(12, (H - this.items.length * PieChart.ROW) / 2);
+    this.items.forEach((it, n) => {
+      const y = y0 + n * PieChart.ROW, mid = y + (PieChart.ROW - 2) / 2;
+      if (n === this.hover) { g.fillStyle = C.hover; g.beginPath(); g.roundRect(lx - 8, y, kw + 16, PieChart.ROW - 2, 6); g.fill(); }
+      g.globalAlpha = this.hover !== null && n !== this.hover ? 0.65 : 1;
+      g.fillStyle = safeColor(it.color); g.beginPath(); g.roundRect(lx, y + 6, 12, 12, 3); g.fill();
+      g.globalAlpha = 1;
+      const val = `${fmtPts(it.value)}  ·  ${Math.round((100 * it.value) / total)}%`, vw = g.measureText(val).width;
+      g.fillStyle = n === this.hover ? C.text : C.dim; g.textAlign = "right"; g.fillText(val, lx + kw, mid);
+      g.fillStyle = C.text; g.textAlign = "left"; g.fillText(this.elide(g, it.label, Math.max(40, kw - vw - 34)), lx + 20, mid);
+    });
+    if (this.hover !== null && this.mouse) this.tooltip(g, W, H, C);
+  }
+
+  tooltip(g, W, H, C) {
+    const it = this.items[this.hover], lines = it.tip || [];
+    if (!lines.length) return;
+    const fnt = (i) => `${i ? "" : "bold "}12px 'Segoe UI', system-ui, sans-serif`;
+    const w = Math.max(...lines.map((l, i) => { g.font = fnt(i); return g.measureText(l).width; })) + 20, h = lines.length * 18 + 12;
+    const x = Math.max(4, Math.min(W - w - 4, this.mouse.x + 14)), y = Math.max(4, Math.min(H - h - 4, this.mouse.y - h / 2));
+    g.fillStyle = C.tip; g.strokeStyle = safeColor(it.color); g.lineWidth = 1.4; g.beginPath(); g.roundRect(x, y, w, h, 7); g.fill(); g.stroke();
+    lines.forEach((l, i) => { g.font = fnt(i); g.fillStyle = i ? C.text : safeColor(it.color); g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(l, x + 10, y + 16 + i * 18); });
+  }
+
+  elide(g, text, maxW) {
+    if (g.measureText(text).width <= maxW) return text;
+    let s = text;
+    while (s.length > 1 && g.measureText(s + "…").width > maxW) s = s.slice(0, -1);
+    return s + "…";
+  }
+
+  hit(px, py) {
+    const total = this.items.reduce((s, i) => s + i.value, 0);
+    if (!total) return null;
+    const { cx, cy, R, lx, ly, kw, narrow, H } = this.geo();
+    const y0 = narrow ? ly : Math.max(12, (H - this.items.length * PieChart.ROW) / 2);
+    if (px >= lx - 8 && px <= lx + kw + 8 && py >= y0) { const n = Math.floor((py - y0) / PieChart.ROW); return n < this.items.length ? n : null; }
+    const dx = px - cx, dy = py - cy, d = Math.hypot(dx, dy);
+    if (d < R * 0.58 - 2 || d > R + 10) return null;
+    let ang = Math.atan2(dy, dx) + Math.PI / 2;                 // clockwise from the top
+    if (ang < 0) ang += 2 * Math.PI;
+    let acc = 0;
+    for (let n = 0; n < this.items.length; n++) { acc += (2 * Math.PI * this.items[n].value) / total; if (ang < acc) return n; }
+    return this.items.length - 1;
+  }
+
+  onMove(e) {
+    const r = this.cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    this.hover = this.hit(x, y); this.mouse = { x, y };
+    this.cv.style.cursor = this.hover !== null ? "pointer" : "default";
+    this.draw();
+  }
+}
+PieChart.ROW = 24;
+
+function pieBox() {
+  const cv = h("canvas", { class: "chart pie" });
+  return { cv, chart: new PieChart(cv) };
+}
