@@ -36,24 +36,25 @@ function viewStandings() {
   const holder = h("div");
   const pref = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } };
   const setPref = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage blocked */ } };
-  let hideStats = pref("hide_stats", "0") === "1", raceW = Math.min(130, Math.max(64, +pref("race_col_w", 96) || 96));
+  let hideStats = pref("hide_stats", "0") === "1", raceW = Math.min(220, Math.max(64, +pref("race_col_w", 96) || 96));
   const statsToggle = h("button", { class: "btn", type: "button", title: "Hide the Wins, Podiums, Poles, FL and ML columns to make room for more races", onclick: () => {
     hideStats = !hideStats; setPref("hide_stats", hideStats ? "1" : "0"); applyLayout(); } });
-  const widthSlider = h("input", { type: "range", min: 64, max: 130, value: raceW, "aria-label": "Race column width", title: "Width of every race column", oninput: () => {
-    raceW = +widthSlider.value; setPref("race_col_w", String(raceW)); applyLayout(); } });
   let nameW = +pref("name_col_w", 0) || 0;       // 0 = the default width of the Driver column
-  function nameResizer() {                   // drag the right edge of the Driver heading; double-click puts it back
-    const grip = h("span", { class: "grip", title: "Drag to change the width of this column (double-click: back to normal)",
-      ondblclick: () => { nameW = 0; setPref("name_col_w", "0"); applyLayout(); } });
-    grip.addEventListener("pointerdown", (e) => {
-      e.preventDefault(); grip.setPointerCapture(e.pointerId);
-      const x0 = e.clientX, w0 = grip.parentElement.getBoundingClientRect().width;
-      const move = (ev) => { nameW = Math.round(Math.min(420, Math.max(110, w0 + ev.clientX - x0))); applyLayout(); };
-      const up = () => { grip.removeEventListener("pointermove", move); grip.removeEventListener("pointerup", up); setPref("name_col_w", String(nameW)); };
-      grip.addEventListener("pointermove", move); grip.addEventListener("pointerup", up);
+  /* drag the right edge of a heading to change the width of its column (every race column changes together); double-click puts it back */
+  function grip(min, max, get, set, save, normal) {
+    const g = h("span", { class: "grip", title: "Drag to change the width (double-click: back to normal)", onclick: (e) => e.stopPropagation(),
+      ondblclick: (e) => { e.stopPropagation(); set(normal); save(); applyLayout(); } });
+    g.addEventListener("pointerdown", (e) => {
+      e.preventDefault(); e.stopPropagation(); try { g.setPointerCapture(e.pointerId); } catch (err) { /* no capture: the move events still arrive while the pointer is over the handle */ }
+      const x0 = e.clientX, w0 = g.parentElement.getBoundingClientRect().width;
+      const move = (ev) => { set(Math.round(Math.min(max, Math.max(min, w0 + ev.clientX - x0)))); applyLayout(); };
+      const up = () => { g.removeEventListener("pointermove", move); g.removeEventListener("pointerup", up); save(); };
+      g.addEventListener("pointermove", move); g.addEventListener("pointerup", up);
     });
-    return grip;
+    return g;
   }
+  const nameResizer = () => grip(110, 420, () => nameW, (v) => { nameW = v; }, () => setPref("name_col_w", String(nameW)), 0);
+  const raceResizer = () => grip(64, 220, () => raceW, (v) => { raceW = v; }, () => setPref("race_col_w", String(raceW)), 96);
   function applyLayout() {                    // one width for every race column, and the stats columns on or off
     statsToggle.textContent = hideStats ? "Show stats columns" : "Hide stats columns";
     holder.style.setProperty("--rw", raceW + "px");
@@ -61,7 +62,7 @@ function viewStandings() {
     holder.classList.toggle("nostats", hideStats);
   }
   root.append(h("div", { class: "toolbar" }, h("div", { class: "grow" }, h("h2", { class: "ph", text: d.name }), h("div", { class: "sub", text: standingsSub(st, team) })),
-    field("View:", modeSel), statsToggle, field("Race width:", widthSlider), h("button", { class: "btn", type: "button", text: "Export CSV", onclick: () => exportStandingsCsv() }),
+    field("View:", modeSel), statsToggle, h("button", { class: "btn", type: "button", text: "Export CSV", onclick: () => exportStandingsCsv() }),
     discordButton(() => textStandings(S.data, S.mode))), holder,
     h("div", { class: "hint", text: "Click the round name (top of a column) for the round summary  ·  click a race name for that race's full results  ·  click a driver for their profile  ·  click a result cell for that driver's race.   FL = fastest lap   PP = pole position   ML = most laps led   LP = licence points" }));
 
@@ -85,7 +86,7 @@ function viewStandings() {
       }),
       h("th", { rowspan: 2, class: "tot", text: "Points" }), ["Wins", "Podiums", "Poles", "FL", "ML"].map((x) => h("th", { rowspan: 2, class: "stat", text: x })));
     const r2 = h("tr", null, d.cols.map((c) => h("th", { class: "rn" + (c.done ? " act" : ""), title: c.done ? "Open this race's results" : "",
-      onclick: c.done ? () => openRace(c.race) : null, text: c.name })));
+      onclick: c.done ? () => openRace(c.race) : null }, c.name, raceResizer())));
     const lp = {};
     if (!t) for (const x of licenceRows(d)) if (x.points > 0) lp[x.d] = x.points;
     const body = rows.map((r) => {
