@@ -41,20 +41,20 @@ function viewStandings() {
     hideStats = !hideStats; setPref("hide_stats", hideStats ? "1" : "0"); applyLayout(); } });
   let nameW = +pref("name_col_w", 0) || 0;       // 0 = the default width of the Driver column
   /* drag the right edge of a heading to change the width of its column (every race column changes together); double-click puts it back */
-  function grip(min, max, get, set, save, normal) {
+  function grip(min, max, get, set, save, normal, span = 1) {
     const g = h("span", { class: "grip", title: "Drag to change the width (double-click: back to normal)", onclick: (e) => e.stopPropagation(),
       ondblclick: (e) => { e.stopPropagation(); set(normal); save(); applyLayout(); } });
     g.addEventListener("pointerdown", (e) => {
       e.preventDefault(); e.stopPropagation(); try { g.setPointerCapture(e.pointerId); } catch (err) { /* no capture: the move events still arrive while the pointer is over the handle */ }
-      const x0 = e.clientX, w0 = g.parentElement.getBoundingClientRect().width;
-      const move = (ev) => { set(Math.round(Math.min(max, Math.max(min, w0 + ev.clientX - x0)))); applyLayout(); };
+      const x0 = e.clientX, w0 = g.parentElement.getBoundingClientRect().width / span;       // span: a round heading covers several race columns
+      const move = (ev) => { set(Math.round(Math.min(max, Math.max(min, w0 + (ev.clientX - x0) / span)))); applyLayout(); };
       const up = () => { g.removeEventListener("pointermove", move); g.removeEventListener("pointerup", up); save(); };
       g.addEventListener("pointermove", move); g.addEventListener("pointerup", up);
     });
     return g;
   }
   const nameResizer = () => grip(110, 420, () => nameW, (v) => { nameW = v; }, () => setPref("name_col_w", String(nameW)), 0);
-  const raceResizer = () => grip(64, 220, () => raceW, (v) => { raceW = v; }, () => setPref("race_col_w", String(raceW)), 96);
+  const raceResizer = (span) => grip(64, 220, () => raceW, (v) => { raceW = v; }, () => setPref("race_col_w", String(raceW)), 96, span);
   function applyLayout() {                    // one width for every race column, and the stats columns on or off
     statsToggle.textContent = hideStats ? "Show stats columns" : "Hide stats columns";
     holder.style.setProperty("--rw", raceW + "px");
@@ -82,11 +82,11 @@ function viewStandings() {
       groups.map((g) => {
         const rd = d.rounds[g.round], act = roundDone(g);
         return h("th", { colspan: g.cols.length, class: "rh" + (act ? " act" : ""), title: act ? "Open the round summary" : "",
-          onclick: act ? () => openRound(g.round) : null }, h("div", { class: "rno", text: `R${g.round + 1}` }), h("div", { text: roundTrack(rd) }));
+          onclick: act ? () => openRound(g.round) : null }, h("div", { class: "rno", text: `R${g.round + 1}` }), h("div", { text: roundTrack(rd) }), raceResizer(g.cols.length));
       }),
       h("th", { rowspan: 2, class: "tot", text: "Points" }), ["Wins", "Podiums", "Poles", "FL", "ML"].map((x) => h("th", { rowspan: 2, class: "stat", text: x })));
     const r2 = h("tr", null, d.cols.map((c) => h("th", { class: "rn" + (c.done ? " act" : ""), title: c.done ? "Open this race's results" : "",
-      onclick: c.done ? () => openRace(c.race) : null }, c.name, raceResizer())));
+      onclick: c.done ? () => openRace(c.race) : null, text: c.name })));
     const lp = {};
     if (!t) for (const x of licenceRows(d)) if (x.points > 0) lp[x.d] = x.points;
     const body = rows.map((r) => {
