@@ -8,9 +8,9 @@
     "done": 2,
     "drivers": 20,
     "last": "R1  Watkins Glenn GP  ·  Race 2",
-    "last_date": "2026-10-15",
+    "last_date": "15/10/26",
     "next": "R2  Road Atlanta GP  ·  Race 1",
-    "next_date": "",
+    "next_date": "22/10/26",
     "top": [
       [
         "glynn dewar",
@@ -23,64 +23,6 @@
       [
         "kenny simpson",
         37.0
-      ]
-    ],
-    "updated": "2026-10-17",
-    "archived": false
-  },
-  {
-    "name": "Sample Season 1",
-    "file": "data/sample_season1.web.json",
-    "state": "done",
-    "rounds": 5,
-    "races": 10,
-    "done": 10,
-    "drivers": 19,
-    "last": "R5  Red Bull Ring  ·  Race 2",
-    "last_date": "2025-09-14",
-    "next": "",
-    "next_date": "",
-    "top": [
-      [
-        "Rafael Okonkwo",
-        194.0
-      ],
-      [
-        "Dominic Hale",
-        106.0
-      ],
-      [
-        "Imani Brooks",
-        87.0
-      ]
-    ],
-    "updated": "2026-10-18",
-    "archived": false
-  },
-  {
-    "name": "Sample Season 2",
-    "file": "data/sample_season2.web.json",
-    "state": "done",
-    "rounds": 5,
-    "races": 10,
-    "done": 10,
-    "drivers": 16,
-    "last": "R5  Red Bull Ring  ·  Race 2",
-    "last_date": "2026-01-02",
-    "next": "",
-    "next_date": "",
-    "top": [
-      [
-        "Dominic Hale",
-        123.0
-      ],
-      [
-        "Imani Brooks",
-        108.0
-      ],
-      [
-        "Tomasz Kowal",
-        105.0
       ]
     ],
     "updated": "2026-10-18",

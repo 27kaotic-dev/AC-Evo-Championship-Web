@@ -70,5 +70,4 @@ then open <http://localhost:8000>. (`Open file…` works without a server.)
 
 ## Notes
 
-- The four sample seasons (two finished, one running, one not started) are made-up data: invented drivers, different tracks, weather, teams and licence points, no real game ids. Delete them when you add your own.
 - When you change a script or the stylesheet, change the `?v=` number after it in `index.html` so visitors do not get a cached copy.
