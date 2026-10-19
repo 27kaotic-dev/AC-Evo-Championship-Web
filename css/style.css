@@ -106,7 +106,7 @@ table.laps th:first-child, table.laps td:first-child { position: sticky; left: 0
 canvas.chart { display: block; width: 100%; }
 
 /* ---- the standings table (coloured result cells, as in the desktop program) */
-.tablewrap.standings { max-height: none; overflow: auto; }
+.tablewrap.standings { max-height: max(340px, calc(100vh - 215px)); max-height: max(340px, calc(100dvh - 215px)); overflow: auto; }   /* the table scrolls inside the page, so its sideways scroll bar and its headings are always on screen */
 table.st { border-collapse: separate; border-spacing: 0; width: max-content; }   /* only the race columns change with the width slider: nothing is stretched to fill the page */
 .st th { position: sticky; top: 0; z-index: 3; background: var(--panel2); color: var(--dim); font-weight: 700; font-size: 12.5px; padding: 0 8px; height: 30px; text-align: center; border-right: 1px solid var(--border); }
 .st thead tr:nth-child(1) th { top: 0; }
