@@ -107,7 +107,7 @@ canvas.chart { display: block; width: 100%; }
 
 /* ---- the standings table (coloured result cells, as in the desktop program) */
 .tablewrap.standings { max-height: none; overflow: auto; }
-table.st { border-collapse: separate; border-spacing: 0; min-width: 100%; }
+table.st { border-collapse: separate; border-spacing: 0; width: max-content; }   /* only the race columns change with the width slider: nothing is stretched to fill the page */
 .st th { position: sticky; top: 0; z-index: 3; background: var(--panel2); color: var(--dim); font-weight: 700; font-size: 12.5px; padding: 0 8px; height: 30px; text-align: center; border-right: 1px solid var(--border); }
 .st thead tr:nth-child(1) th { top: 0; }
 .st thead tr:nth-child(2) th { top: 44px; border-bottom: 2px solid var(--accent); }
@@ -151,10 +151,10 @@ input[type=range] { vertical-align: middle; width: 90px; accent-color: var(--acc
 .cell .tags { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column-reverse; align-items: flex-start; font-size: 9.5px; line-height: 1.15; font-weight: 800; }
 .cell.dropped .cp, .cell.dropped .cs { text-decoration: line-through; opacity: .45; }
 td.link:hover .cell { border-color: var(--cell-edge); }
-.st td.tot { min-width: 84px; }
+.st td.tot { width: 84px; min-width: 84px; }
 .total { height: 44px; margin: 2px; border-radius: 7px; background: var(--total); display: grid; place-items: center; font-size: 19px; font-weight: 800; color: var(--hi); }
-.st td.stat { text-align: center; min-width: 62px; font-size: 13.5px; }
-.st th.stat { min-width: 62px; } .st th.tot { min-width: 84px; }
+.st td.stat { text-align: center; width: 62px; min-width: 62px; font-size: 13.5px; }
+.st th.stat { width: 62px; min-width: 62px; } .st th.tot { width: 84px; min-width: 84px; }
 
 /* ---- modal (driver profile) */
 .modal { position: fixed; inset: 0; z-index: 50; background: rgba(5, 7, 12, .66); display: flex; align-items: flex-start; justify-content: center; padding: 4vh 12px; overflow: auto; }
