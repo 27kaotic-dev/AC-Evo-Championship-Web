@@ -96,7 +96,9 @@ class LineChart {
       const sy = [...ys].sort((a, b2) => a - b2), med = sy[Math.floor(sy.length / 2)];
       ymax = Math.min(ymax, med * 1.08); ymin = Math.min(ymin, ymax);
     }
-    const [ylo, yhi, yticks] = this.yAxis(ymin, ymax, plot.h);
+    if (o.ycap) { ymax = Math.min(ymax, o.ycap); ymin = Math.min(ymin, ymax); }      // the axis stops here
+    let [ylo, yhi, yticks] = this.yAxis(ymin, ymax, plot.h);
+    if (o.ycap && yhi > o.ycap) { yhi = o.ycap; yticks = yticks.filter((v) => v <= yhi + 1e-9); }
     const mx = (x) => plot.left + ((x - xmin) / (xmax - xmin)) * plot.w;
     const my = (y) => {
       y = Math.max(ylo, Math.min(yhi, y));
@@ -120,6 +122,16 @@ class LineChart {
       g.fillStyle = C.dim; g.textAlign = "center"; g.textBaseline = "top"; g.fillText(lab, xx, plot.bottom + 8);
     });
     this.geo = { plot, mx, my, xmin, xmax };
+    if (o.ycap) {                                          // lines that go beyond the cap run along the top edge
+      const off = this.series.filter((s) => s.pts.some(([, y]) => y > yhi + 1e-9)).length;
+      if (off) {
+        const note = `${off} driver${off === 1 ? "" : "s"} beyond ${o.yfmt(yhi)} run along the top edge  -  hover a name for the real gap`;
+        g.font = "11px 'Segoe UI', system-ui, sans-serif";
+        const nw = g.measureText(note).width + 16;
+        g.fillStyle = C.panel2; g.fillRect(plot.left + 8, plot.top + 6, Math.min(nw, plot.w - 16), 20);
+        g.fillStyle = C.dim; g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(note, plot.left + 16, plot.top + 16);
+      }
+    }
     const hov = this.hover !== null && this.hover < this.series.length ? this.hover : null;
     const order = this.series.map((_, k) => k).filter((k) => k !== hov);
     if (hov !== null) order.push(hov);                     // the hovered line is drawn last so it sits on top

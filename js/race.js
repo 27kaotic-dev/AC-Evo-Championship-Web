@@ -163,7 +163,10 @@ function tCuts(st) {
     td(s.invalid.length, "c " + (s.invalid.length ? "bad" : "dim")), td(s.invalid.join(", "), "dim"))));
 }
 
+let GAP_CHOICE = "180";            // "Show gaps up to" on the Gaps graph (seconds, or "all"), kept while the page is open
+
 function tChart(st, mode) {
+  let gapBar = null;
   const have = st.filter((s) => s.cum.length && s.laps.length);
   const { cv, chart } = chartBox(480);
   if (!have.length) { chart.setData([]); return h("div", { class: "chartwrap" }, cv); }
@@ -181,14 +184,18 @@ function tChart(st, mode) {
     const ref = have[0];
     series = have.map((s) => ({ label: s.e.name, color: s.e.color,
       pts: Array.from({ length: Math.min(ref.cum.length, s.cum.length) }, (_, n) => [n + 1, (s.cum[n] - ref.cum[n]) / 1000]) }));
-    chart.setData(series, { integer: true, yfmt: (v) => (v < 0 ? "-" : "+") + Math.abs(v).toFixed(0) + "s" });
+    const draw = () => chart.setData(series, { integer: true, ycap: GAP_CHOICE === "all" ? null : +GAP_CHOICE, yfmt: (v) => (v < 0 ? "-" : "+") + Math.abs(v).toFixed(0) + "s" });
+    const sel = h("select", { "aria-label": "Show gaps up to", onchange: () => { GAP_CHOICE = sel.value; draw(); } },
+      option("60", "60 s", GAP_CHOICE === "60"), option("120", "120 s", GAP_CHOICE === "120"), option("180", "180 s", GAP_CHOICE === "180"), option("all", "Everyone", GAP_CHOICE === "all"));
+    gapBar = h("div", { class: "toolbar" }, field("Show gaps up to:", sel));
+    draw();
   } else {
     series = have.map((s) => ({ label: s.e.name, color: s.e.color, pts: s.laps.map((l) => [l.lap, l.time_ms]) }));
     chart.setData(series, { clip: true, integer: true, unit: 1000,
       yfmt: (v) => (pyRound(v) % 1000 === 0 ? fmtTime(v).slice(0, -4) : fmtTime(v)) });
   }
   const note = { 0: "Position after each lap.", 1: `Gap to ${have[0].e.name} after each lap (the leader of the classification).`, 2: "Lap times; the axis is cut off at slow laps (pit stops, crashes)." }[mode];
-  return h("div", { class: "chartwrap" }, cv, h("div", { class: "hint", text: note + " Hover a line or a name in the key to highlight it." }));
+  return h("div", { class: "chartwrap" }, gapBar, cv, h("div", { class: "hint", text: note + " Hover a line or a name in the key to highlight it." }));
 }
 
 /* ---------------------------------------------------------------- one race */
