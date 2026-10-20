@@ -255,7 +255,7 @@ function raceView(race, focusId) {
   const nPen = S.data.penalties.filter((p) => p.race === race.id).length;
   chips.append(chip("Laps", win ? win.laps : 0), chip("Classified", race.classified),
     chip("DNF / DSQ", calc.filter((r) => r.status === "DNF" || r.status === "DSQ").length),
-    chip("Penalties", nPen, nPen ? cssVar("--red") : null));
+    chip("Steward penalties", nPen, nPen ? cssVar("--red") : null));
   const tail = [{ title: "Driver data", make: () => driverData(race, focusId) }];
   if (race.quali && race.quali.entries.length) {
     const q = race.quali.entries.map((e) => ({ name: e.name, color: e.color, car: e.car, laps: e.laps, total_ms: e.total,
