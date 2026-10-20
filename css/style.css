@@ -124,8 +124,9 @@ table.st { border-collapse: separate; border-spacing: 0; width: max-content; }  
 .st .c0 { left: 0; min-width: 54px; width: 54px; }
 .st .c1 { left: 54px; width: var(--dw, 210px); min-width: var(--dw, 210px); max-width: var(--dw, 210px); box-shadow: 1px 0 0 var(--border); overflow: hidden; }
 .st th.c1 { position: sticky; }
-.st th .grip { position: absolute; top: 0; right: 0; width: 7px; height: 100%; cursor: col-resize; touch-action: none; }
-.st th .grip:hover { background: var(--accent); opacity: .6; }
+.st th .grip, .dt th .grip { position: absolute; top: 0; right: 0; width: 7px; height: 100%; cursor: col-resize; touch-action: none; }
+.st th .grip:hover, .dt th .grip:hover { background: var(--accent); opacity: .6; }
+.dt.sized th, .dt.sized td { overflow: hidden; text-overflow: ellipsis; }
 .st td.nm .nt { min-width: 0; max-width: calc(var(--dw, 210px) - 56px); }
 .st td.nm .nt b, .st td.nm .nt small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .st td.rank { text-align: center; }

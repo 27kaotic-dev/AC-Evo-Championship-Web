@@ -33,8 +33,40 @@ function chip(title, value, color) {
 function table(heads, rows, cls) {
   const first = rows.length ? rows[0].children : [];
   const align = (i) => (first[i] && /(^|\s)[cr](\s|$)/.test(first[i].className) ? "c" : "");
-  return h("div", { class: "tablewrap" }, h("table", { class: "dt " + (cls || "") },
-    h("thead", null, h("tr", null, heads.map((x, i) => h("th", { class: align(i), text: x })))), h("tbody", null, rows)));
+  const tbl = h("table", { class: "dt " + (cls || "") },
+    h("thead", null, h("tr", null, heads.map((x, i) => h("th", { class: align(i) }, x)))), h("tbody", null, rows));
+  makeSizeable(tbl, heads.join("|") + "|" + (cls || ""));
+  return h("div", { class: "tablewrap" }, tbl);
+}
+
+/* every column of a table can be dragged wider or narrower (the right edge of its heading); double-click puts the table back.
+   The widths are kept while the page is open, so they are still there when you change race or tab. */
+const COL_W = {};
+function makeSizeable(tbl, key) {
+  const ths = [...tbl.querySelectorAll("thead th")];
+  const apply = (w) => {
+    ths.forEach((th, i) => { th.style.width = th.style.minWidth = th.style.maxWidth = w[i] + "px"; });
+    tbl.style.tableLayout = "fixed"; tbl.style.width = w.reduce((a, b) => a + b, 0) + "px"; tbl.classList.add("sized");
+  };
+  if (COL_W[key] && COL_W[key].length === ths.length) apply(COL_W[key]);
+  ths.forEach((th, i) => {
+    const g = h("span", { class: "grip", title: "Drag to change the width of this column (double-click: back to normal)", onclick: (e) => e.stopPropagation(),
+      ondblclick: (e) => {
+        e.stopPropagation(); delete COL_W[key];
+        ths.forEach((t) => { t.style.width = t.style.minWidth = t.style.maxWidth = ""; });
+        tbl.style.tableLayout = tbl.style.width = ""; tbl.classList.remove("sized");
+      } });
+    g.addEventListener("pointerdown", (e) => {
+      e.preventDefault(); e.stopPropagation();
+      try { g.setPointerCapture(e.pointerId); } catch (err) { /* no capture: the move events still arrive while the pointer is over the handle */ }
+      const w = COL_W[key] && COL_W[key].length === ths.length ? [...COL_W[key]] : ths.map((t) => Math.round(t.getBoundingClientRect().width));
+      const x0 = e.clientX, w0 = w[i];
+      const move = (ev) => { w[i] = Math.max(40, Math.round(w0 + ev.clientX - x0)); COL_W[key] = w; apply(w); };
+      const up = () => { g.removeEventListener("pointermove", move); g.removeEventListener("pointerup", up); };
+      g.addEventListener("pointermove", move); g.addEventListener("pointerup", up);
+    });
+    th.append(g);
+  });
 }
 
 function td(content, cls, style) { return h("td", { class: cls || "", style: style || null }, content); }
