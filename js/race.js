@@ -65,9 +65,9 @@ function sessionView(all, { lead = [], tail = [] } = {}) {
     items.push({ title: "Result", make: () => tResult(st) });
     const hasLaps = st.some((s) => s.laps.length);
     if (hasLaps) items.push({ title: "Laps", make: () => tLaps(st) });
-    items.push({ title: "Best laps", make: () => tBest(st) });
+    items.push({ title: "Best Laps", make: () => tBest(st) });
+    if (st.some((s) => s.secbest.length)) items.push({ title: "Ideal Lap", make: () => tSectors(st) });          // next to Best Laps
     if (hasLaps) items.push({ title: "Consistency", make: () => tCons(st) });
-    if (st.some((s) => s.secbest.length)) items.push({ title: "Sectors", make: () => tSectors(st) });
     if (hasLaps) {
       items.push({ title: "Cuts / invalid laps", make: () => tCuts(st) });
       items.push({ title: "Positions graph", make: () => tChart(st, 0) });
@@ -120,14 +120,17 @@ function tLaps(st) {
 
 function tBest(st) {
   const rk = st.filter((s) => s.best > 0).sort((a, b) => a.best - b.best);
+  const bls = rk.map((s) => s.laps.find((l) => l.time_ms === s.best && l.valid));
+  const nsec = Math.max(0, ...bls.map((bl) => (bl ? bl.splits.length : 0)));       // the sectors of each driver's best lap, one column each
   const rows = rk.map((s, r) => {
-    const bl = s.laps.find((l) => l.time_ms === s.best && l.valid);
+    const bl = bls[r];
     return h("tr", null, td(r + 1, "c b " + medalClass(r + 1)), nameTd(s.e.name, s.e.color), td(s.e.car, "dim"),
       td(fmtTime(s.best), "r " + pc(r === 0, "purple b")), td(s.blap || "", "c dim"),
       td(r ? fmtGap(s.best - rk[0].best) : "", "r dim"), td(r ? fmtGap(s.best - rk[r - 1].best) : "", "r dim"),
-      td(bl ? bl.splits.map(fmtTime).join("   ") : "", "dim"));
+      Array.from({ length: nsec }, (_, k) => td(bl && bl.splits.length > k ? fmtTime(bl.splits[k]) : "", "r dim")));
   });
-  return table(["Rank", "Driver", "Car", "Best lap", "On lap", "Gap to fastest", "Interval", "Sectors"], rows);
+  return h("div", null, table(["Rank", "Driver", "Car", "Best lap", "On lap", "Gap", "Interval", ...Array.from({ length: nsec }, (_, k) => `S${k + 1}`)], rows),
+    h("div", { class: "hint", text: "Gap = behind the fastest lap  ·  Interval = behind the driver ranked just above  ·  S1, S2, S3 = the sectors of that lap" }));
 }
 
 function tCons(st) {
@@ -155,7 +158,8 @@ function tSectors(st) {
     return h("tr", null, nameTd(s.e.name, s.e.color), cells, td(fmtTime(ideal), "r green"), td(fmtTime(s.best), "r"),
       td(ideal && s.best > ideal ? fmtGap(s.best - ideal) : "", "r dim"));
   });
-  return table(["Driver", ...Array.from({ length: nsec }, (_, k) => `Best S${k + 1}`), "Ideal lap", "Best lap", "Potential gain"], rows);
+  return h("div", null, table(["Driver", ...Array.from({ length: nsec }, (_, k) => `Best S${k + 1}`), "Ideal lap", "Best lap", "Potential gain"], rows),
+    h("div", { class: "hint", text: "Ideal lap = the best sectors added together  ·  Potential gain = how much faster the best lap could be" }));
 }
 
 function tCuts(st) {
