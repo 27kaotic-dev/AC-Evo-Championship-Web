@@ -93,5 +93,23 @@ function downloadCsv(name, table) { download(name + ".csv", new Blob([tableToCsv
 
 function option(value, text, selected) { return h("option", { value, text, selected: selected || false }); }
 
+/* A table taller than the screen scrolls inside the page, so its sideways scroll bar is always in view (no need to scroll
+   to the bottom of a long table first).  The height is what is left of the window below the top of the table. */
+let fitQueued = false;
+function fitTables() {
+  fitQueued = false;
+  document.querySelectorAll(".tablewrap").forEach((w) => {
+    if (!w.offsetParent) return;                                   // on a tab that is not showing
+    const top = w.getBoundingClientRect().top + window.scrollY;
+    const want = Math.max(280, Math.floor(window.innerHeight - top - 24)) + "px";
+    if (w.style.maxHeight !== want) w.style.maxHeight = want;
+  });
+}
+function queueFit() { if (!fitQueued) { fitQueued = true; setTimeout(fitTables, 30); } }
+window.addEventListener("resize", queueFit);
+window.addEventListener("load", queueFit);
+if (window.MutationObserver) new MutationObserver(queueFit).observe(document.documentElement, { childList: true, subtree: true });
+if (window.ResizeObserver) new ResizeObserver(queueFit).observe(document.documentElement);
+
 /* a label and its control kept together when the toolbar wraps */
 function field(text, ...controls) { return h("span", { class: "field" }, h("label", { text }), controls); }

@@ -36,7 +36,7 @@ function viewStandings() {
   const holder = h("div");
   const pref = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } };
   const setPref = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage blocked */ } };
-  let hideStats = pref("hide_stats", "0") === "1", raceW = Math.min(220, Math.max(64, +pref("race_col_w", 96) || 96));
+  let hideStats = pref("hide_stats", "0") === "1", raceW = Math.min(220, Math.max(64, +pref("race_col_w", 87) || 87));
   const statsToggle = h("button", { class: "btn", type: "button", title: "Hide the Wins, Podiums, Poles, FL and ML columns to make room for more races", onclick: () => {
     hideStats = !hideStats; setPref("hide_stats", hideStats ? "1" : "0"); applyLayout(); } });
   let nameW = +pref("name_col_w", 0) || 0;       // 0 = the default width of the Driver column
@@ -54,7 +54,7 @@ function viewStandings() {
     return g;
   }
   const nameResizer = () => grip(110, 420, () => nameW, (v) => { nameW = v; }, () => setPref("name_col_w", String(nameW)), 0);
-  const raceResizer = (span) => grip(64, 220, () => raceW, (v) => { raceW = v; }, () => setPref("race_col_w", String(raceW)), 96, span);
+  const raceResizer = (span) => grip(64, 220, () => raceW, (v) => { raceW = v; }, () => setPref("race_col_w", String(raceW)), 87, span);
   function applyLayout() {                    // one width for every race column, and the stats columns on or off
     statsToggle.textContent = hideStats ? "Show stats columns" : "Hide stats columns";
     holder.style.setProperty("--rw", raceW + "px");
