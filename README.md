@@ -59,7 +59,7 @@ then open <http://localhost:8000>. (`Open file…` works without a server.)
 | `js/standings.js` | Standings and Points progression pages |
 | `js/race.js` | race, round and driver pages |
 | `js/library.js` | the Champ Library page |
-| `js/stats.js` | the Stats page: tracks, records, drivers, head-to-head |
+| `js/stats.js` | the Stats page: tracks, records, drivers, ratings, head-to-head |
 | `js/pages.js` | the Licence page |
 | `js/discord.js` | Copy for Discord (text for a chat message) |
 | `js/app.js` | start-up, theme, loading files |

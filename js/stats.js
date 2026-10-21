@@ -148,6 +148,48 @@ function statsChampions(champs) {
   });
 }
 
+/* Driver ratings from the finishing order of every race, oldest first (Elo style); same rules as the desktop program's stats_ratings */
+const RATING = { start: 1000, k: 40, kNew: 60, newStarts: 5, provisional: 3 };
+function statsRatings(races) {
+  const d = new Map();
+  for (const race of races) {
+    const field = race.rows.filter((w) => w.status !== "DNS");
+    if (!field.length) continue;
+    const place = new Map(field.map((w) => [w.pid, w.pos && w.status !== "DSQ" ? w.pos : 1e6]));
+    for (const w of field) {
+      let a = d.get(w.pid);
+      if (!a) { a = { pid: w.pid, name: w.name, _date: race.date, rating: RATING.start, peak: RATING.start, starts: 0, wins: 0, _hist: [RATING.start], _g: 0, _gn: 0 }; d.set(w.pid, a); }
+      else if (race.date >= a._date) { a.name = w.name; a._date = race.date; }
+    }
+    const pre = new Map(field.map((w) => [w.pid, d.get(w.pid).rating]));
+    const n = field.length, delta = new Map();
+    for (const w of field) {
+      const ri = pre.get(w.pid), pi = place.get(w.pid);
+      let s = 0, e = 0, opp = 0;
+      for (const o of field) {
+        if (o.pid === w.pid) continue;
+        const rj = pre.get(o.pid), pj = place.get(o.pid);
+        s += pi < pj ? 1 : (pi === pj ? 0.5 : 0);
+        e += 1 / (1 + Math.pow(10, (rj - ri) / 400));
+        opp += rj;
+      }
+      const a = d.get(w.pid), k = a.starts < RATING.newStarts ? RATING.kNew : RATING.k;
+      delta.set(w.pid, n > 1 ? (k * (s - e)) / (n - 1) : 0);
+      if (n > 1) { a._g += opp / (n - 1); a._gn++; }
+    }
+    for (const w of field) {
+      const a = d.get(w.pid);
+      a.rating += delta.get(w.pid); a.starts++;
+      if (w.pos === 1 && w.status !== "DSQ") a.wins++;
+      a.peak = Math.max(a.peak, a.rating); a._hist.push(a.rating);
+    }
+  }
+  return [...d.values()].map((a) => ({ pid: a.pid, name: a.name, starts: a.starts, rating: a.rating, peak: a.peak, wins: a.wins,
+    last5: a._hist[a._hist.length - 1] - a._hist[Math.max(0, a._hist.length - 6)], grid: a._gn ? a._g / a._gn : 0, provisional: a.starts < RATING.provisional }))
+    .sort((a, b) => b.rating - a.rating || b.starts - a.starts || (lc(a.name) < lc(b.name) ? -1 : lc(a.name) > lc(b.name) ? 1 : 0) || (a.pid < b.pid ? -1 : a.pid > b.pid ? 1 : 0));
+}
+const fmtRating = (x) => Math.floor(x + 0.5).toLocaleString("en-US");
+
 function statsCareer(champs, races, pid) {
   const seasons = [];
   for (const c of sortChamps(champs)) {
@@ -271,6 +313,7 @@ function fillStats(root, body) {
     { title: "Tracks raced", make: () => statsTracksPage(races) },
     { title: "Track records", make: () => statsRecordsPage(races) },
     { title: "Drivers (all-time)", make: () => statsDriversPage(champs, races) },
+    { title: "Ratings", make: () => statsRatingsPage(races, champs) },
     { title: "Head-to-head", make: () => statsH2hPage(champs, races) },
   ], keep);
   body.append(h("div", { class: "toolbar" }, h("span", { class: "grow" }), menu,
@@ -280,7 +323,42 @@ function fillStats(root, body) {
     } })), tabs.el);
   tabs.el.addEventListener("click", () => { S.statsTab = tabs.index; });
 }
-const STATS_NAMES = ["champions", "tracks_raced", "track_records", "drivers_all_time", "head_to_head"];
+const STATS_NAMES = ["champions", "tracks_raced", "track_records", "drivers_all_time", "ratings", "head_to_head"];
+
+function statsRatingsPage(races, champs) {
+  const all = statsRatings(races);
+  const HEADS = [["#", null], ["Driver", "name"], ["Starts", "starts"], ["Rating", "rating"], ["Last 5", "last5"], ["Peak", "peak"], ["Wins", "wins"], ["Grid rating", "grid"]];
+  let key = "rating", desc = true;
+  const search = h("input", { type: "search", placeholder: "Find a driver…", "aria-label": "Find a driver", oninput: () => draw() });
+  const holder = h("div");
+  function draw() {
+    const q = lc(search.value.trim());
+    const rows = all.filter((r) => lc(r.name).includes(q));
+    if (key === "name") rows.sort((a, b) => (lc(a.name) < lc(b.name) ? -1 : 1) * (desc ? -1 : 1));
+    else if (key) rows.sort((a, b) => (a[key] < b[key] ? -1 : a[key] > b[key] ? 1 : 0) * (desc ? -1 : 1));
+    const trs = rows.map((r, i) => {
+      const ch = Math.floor(Math.abs(r.last5) + 0.5);
+      return h("tr", { class: "link", onclick: () => openCareer(champs, races, r.pid) }, td(i + 1, "c dim"), td(r.name, "b"), td(r.starts, "c dim"),
+        h("td", { class: "c b" + (r.provisional ? " dim" : ""), title: r.provisional ? "Provisional: fewer than 3 starts" : null, text: fmtRating(r.rating) }),
+        td(ch ? (r.last5 > 0 ? "▲ " : "▼ ") + ch : "-", "c " + (!ch ? "dim" : r.last5 > 0 ? "green" : "bad")), td(fmtRating(r.peak), "c dim"),
+        td(r.wins || "-", "c " + (r.wins ? "m1" : "dim")), td(r.grid ? fmtRating(r.grid) : "-", "c dim"));
+    });
+    const t = table(HEADS.map((x) => x[0]), trs);
+    t.querySelectorAll("th").forEach((th, c) => {
+      if (HEADS[c][1] === null) return;
+      th.classList.add("sortable");
+      th.addEventListener("click", () => {
+        const k = HEADS[c][1];
+        if (key === k) desc = !desc; else { key = k; desc = k !== "name"; }
+        draw();
+      });
+    });
+    clear(holder).append(t);
+  }
+  draw();
+  return h("div", null, h("div", { class: "toolbar" }, search, h("span", { class: "grow" }),
+    h("span", { class: "hint", text: "Click a heading to sort · click a driver for their career · everyone starts on 1,000; fewer than 3 starts is provisional (grey)" })), holder);
+}
 
 function statsChampionsPage(champs, races) {
   const rows = statsChampions(champs);
@@ -421,13 +499,18 @@ function statsDriversPage(champs, races) {
   return h("div", null, h("div", { class: "toolbar" }, search, h("span", { class: "grow" }), h("span", { class: "hint", text: "Click a heading to sort · click a driver for their career" })), holder);
 }
 
+function ratingChip(races, pid) {
+  const rt = statsRatings(races).find((x) => x.pid === pid);
+  return rt ? chip("Rating", fmtRating(rt.rating) + (rt.provisional ? "?" : ""), cssVar("--blue")) : null;
+}
+
 function openCareer(champs, races, pid) {
   const me = statsDrivers(champs, races).find((d) => d.pid === pid), info = statsCareer(champs, races, pid);
   if (!me) return;
   const chips = h("div", { class: "chips" }, chip("Titles", me.titles, me.titles ? cssVar("--gold") : null),
     chip("Runner-up / 3rd", `${me.seconds} / ${me.thirds}`, me.seconds || me.thirds ? cssVar("--silver") : null), chip("Wins", me.wins, me.wins ? cssVar("--gold") : null),
     chip("Podiums", me.podiums), chip("Poles", me.poles, me.poles ? cssVar("--blue") : null), chip("Fastest laps", me.fls, me.fls ? cssVar("--purple") : null),
-    chip("Points", fmtPts(me.points), cssVar("--accent")), chip("Avg finish", me.avg_finish ? me.avg_finish.toFixed(1) : "-"), chip("DNFs", me.dnfs));
+    chip("Points", fmtPts(me.points), cssVar("--accent")), ratingChip(races, pid), chip("Avg finish", me.avg_finish ? me.avg_finish.toFixed(1) : "-"), chip("DNFs", me.dnfs));
   const seasons = info.seasons.map((s) => h("tr", null, td(s.champ, "b"),
     td(`${ordinal(s.rank)} of ${s.of}` + (s.rank === 1 && s.state === "done" ? "  (title)" : (s.state !== "done" ? "  (so far)" : "")), "c " + (s.state === "done" ? medalClass(s.rank) : "") + (s.rank <= 3 ? " b" : "")),
     td(fmtPts(s.total), "c"), td(s.wins, "c"), td(s.podiums, "c"), td(s.poles, "c"), td(s.fls, "c"), td(s.dnfs, "c"), td(s.starts, "c")));
