@@ -5,27 +5,27 @@
     "state": "live",
     "rounds": 5,
     "races": 10,
-    "done": 2,
-    "drivers": 20,
-    "last": "R1  Watkins Glenn GP  ·  Race 2",
-    "last_date": "15-10-26",
-    "next": "R2  Road Atlanta GP  ·  Race 1",
-    "next_date": "22-10-26",
+    "done": 4,
+    "drivers": 23,
+    "last": "R2  Road Atlanta GP  ·  Race 2",
+    "last_date": "22-10-26",
+    "next": "R3  Donington Park GP  ·  Race 1",
+    "next_date": "29-10-26",
     "top": [
       [
         "glynn dewar",
-        50.0
+        94.0
       ],
       [
         "steven Melling",
-        42.0
+        82.0
       ],
       [
-        "kenny simpson",
-        37.0
+        "Josh McLaughlin",
+        75.0
       ]
     ],
-    "updated": "2026-10-19",
+    "updated": "2026-10-23",
     "archived": false
   }
 ]
