@@ -9,6 +9,9 @@ function standingsSub(st, team) {
   return `${done} of ${all} races completed  ·  ${st.length} ${team ? "teams" : "drivers"}${drop}${best}`;
 }
 
+/* a race that was run, and the driver is not in it: shown as DNS (not a real result, so it is never clicked or counted) */
+const DNS_CELL = { pos: 0, pts: 0, status: "DNS", fl: false, ml: false, pole: false, dropped: false };
+
 function resultCell(c, onclick) {
   if (!c) return h("td", { class: "rc" });
   const cls = ["cell"];
@@ -21,6 +24,7 @@ function resultCell(c, onclick) {
   const statusOnly = ["DNF", "DSQ", "DNS"].includes(c.status) && c.pts === 0;
   const main = statusOnly ? h("div", { class: "cs " + (c.status === "DNS" ? "dim" : "bad"), text: c.status }) : h("div", { class: "cp", text: fmtPts(c.pts) });
   const tags = h("div", { class: "tags" });
+  if (c.status === "DSQ" && c.pts > 0) tags.append(h("span", { class: "bad", title: "Disqualified", text: "DQ" }));
   if (c.fl) tags.append(h("span", { class: "purple", text: "FL" }));
   if (c.pole) tags.append(h("span", { class: "blue", text: "PP" }));
   if (c.ml) tags.append(h("span", { class: "green", text: "ML" }));
@@ -64,7 +68,7 @@ function viewStandings() {
   root.append(h("div", { class: "toolbar" }, h("div", { class: "grow" }, h("h2", { class: "ph", text: d.name }), h("div", { class: "sub", text: standingsSub(st, team) })),
     field("View:", modeSel), statsToggle, h("button", { class: "btn", type: "button", text: "Export CSV", onclick: () => exportStandingsCsv() }),
     discordButton(() => textStandings(S.data, S.mode))), holder,
-    h("div", { class: "hint", text: "Click the round name (top of a column) for the round summary  ·  click a race name for that race's full results  ·  click a driver for their profile  ·  click a result cell for that driver's race.   FL = fastest lap   PP = pole position   ML = most laps led   LP = licence points" }));
+    h("div", { class: "hint", text: "Click the round name (top of a column) for the round summary  ·  click a race name for that race's full results  ·  click a driver for their profile  ·  click a result cell for that driver's race.   FL = fastest lap   PP = pole position   ML = most laps led   DQ = disqualified (still scores)   LP = licence points" }));
 
   function render() {
     const t = S.mode === "teams", rows = d.standings[S.mode];
@@ -97,7 +101,7 @@ function viewStandings() {
         h("td", { class: "sticky c1 nm" + (t ? "" : " link"), onclick: t ? null : () => openDriver(r.id) },
           h("span", { class: "bar big", style: { background: safeColor(r.color) } }), h("span", { class: "nt" }, h("b", { text: r.name }), sub ? h("small", { text: sub }) : null),
           lp[r.id] ? h("span", { class: "lp", title: "Licence points", text: `LP ${lp[r.id]}` }) : null),
-        d.cols.map((c, ci) => resultCell(r.cells[String(ci)], c.done && r.cells[String(ci)] ? () => openRace(c.race, t ? null : r.id) : null)),
+        d.cols.map((c, ci) => resultCell(r.cells[String(ci)] || (c.done && !t ? DNS_CELL : null), c.done && r.cells[String(ci)] ? () => openRace(c.race, t ? null : r.id) : null)),
         h("td", { class: "tot" }, h("div", { class: "total", title: r.cpen ? `Includes ${fmtPts(r.cpen)} pts championship penalty` : null, text: fmtPts(r.total) })),
         ["wins", "podiums", "poles", "fls", "mls"].map((k) => h("td", { class: "stat " + (r[k] ? "" : "dim"), text: r[k] ? String(r[k]) : "-" })));
     });

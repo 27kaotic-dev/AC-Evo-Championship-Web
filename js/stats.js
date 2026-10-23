@@ -29,7 +29,7 @@ function champRecord(data, cid) {
       else { track = String(rd.track || rd.name || "").trim(); layout = ""; }
     }
     return {
-      cid, champ: data.name, round_key: `${cid}:${rd.id}`, round: r.round + 1, round_name: rd.name, track, layout: layout || "",
+      cid, rid: r.id, champ: data.name, round_key: `${cid}:${rd.id}`, round: r.round + 1, round_name: rd.name, track, layout: layout || "",
       tkey: trackKey(track, layout), date: String(rd.date || meta.date || ""), weather: r.weather || "", race: r.name,
       rows: r.rows.map((w) => ({
         pid: pidOf(w.d), name: nameOf(w.d), car: String(w.car || ""), pos: w.pos, grid: w.grid, status: w.status, laps: w.laps,
@@ -148,17 +148,19 @@ function statsChampions(champs) {
   });
 }
 
-/* Driver ratings from the finishing order of every race, oldest first (Elo style); same rules as the desktop program's stats_ratings */
+/* Driver ratings (Elo style) from the finishing order of every race, oldest first; the same rules as the desktop program's _rate.
+   `since` (a date) only decides which races count for the period figures; the ratings are always worked out from the whole history. */
 const RATING = { start: 1000, k: 40, kNew: 60, newStarts: 5, provisional: 3 };
-function statsRatings(races) {
+function rateRun(races, since, moves) {
   const d = new Map();
   for (const race of races) {
     const field = race.rows.filter((w) => w.status !== "DNS");
     if (!field.length) continue;
+    const counted = since === null || !!(race.date && race.date >= since);
     const place = new Map(field.map((w) => [w.pid, w.pos && w.status !== "DSQ" ? w.pos : 1e6]));
     for (const w of field) {
       let a = d.get(w.pid);
-      if (!a) { a = { pid: w.pid, name: w.name, _date: race.date, rating: RATING.start, peak: RATING.start, starts: 0, wins: 0, _hist: [RATING.start], _g: 0, _gn: 0 }; d.set(w.pid, a); }
+      if (!a) { a = { pid: w.pid, name: w.name, _date: race.date, rating: RATING.start, starts: 0, _ps: null, _pk: null, _pn: 0, _pw: 0, _g: 0, _gn: 0 }; d.set(w.pid, a); }
       else if (race.date >= a._date) { a.name = w.name; a._date = race.date; }
     }
     const pre = new Map(field.map((w) => [w.pid, d.get(w.pid).rating]));
@@ -175,18 +177,40 @@ function statsRatings(races) {
       }
       const a = d.get(w.pid), k = a.starts < RATING.newStarts ? RATING.kNew : RATING.k;
       delta.set(w.pid, n > 1 ? (k * (s - e)) / (n - 1) : 0);
-      if (n > 1) { a._g += opp / (n - 1); a._gn++; }
+      if (counted && n > 1) { a._g += opp / (n - 1); a._gn++; }
     }
     for (const w of field) {
-      const a = d.get(w.pid);
+      const a = d.get(w.pid), before = a.rating;
+      if (counted && a._ps === null) a._ps = before;
       a.rating += delta.get(w.pid); a.starts++;
-      if (w.pos === 1 && w.status !== "DSQ") a.wins++;
-      a.peak = Math.max(a.peak, a.rating); a._hist.push(a.rating);
+      if (counted) { a._pn++; if (w.pos === 1 && w.status !== "DSQ") a._pw++; a._pk = a._pk === null ? a.rating : Math.max(a._pk, a.rating); }
+      if (moves) {
+        const key = `${race.round_key}|${race.rid || race.race}`;
+        if (!moves.has(key)) moves.set(key, []);
+        moves.get(key).push({ pid: w.pid, name: w.name, pos: w.status === "DSQ" ? null : w.pos, status: w.status, before, after: a.rating, delta: delta.get(w.pid) });
+      }
     }
   }
-  return [...d.values()].map((a) => ({ pid: a.pid, name: a.name, starts: a.starts, rating: a.rating, peak: a.peak, wins: a.wins,
-    last5: a._hist[a._hist.length - 1] - a._hist[Math.max(0, a._hist.length - 6)], grid: a._gn ? a._g / a._gn : 0, provisional: a.starts < RATING.provisional }))
+  return d;
+}
+function statsRatings(races, since = null) {
+  return [...rateRun(races, since, null).values()].filter((a) => a._pn > 0).map((a) => ({ pid: a.pid, name: a.name, starts: a._pn, rating: a.rating,
+    change: a.rating - a._ps, peak: a._pk, wins: a._pw, grid: a._gn ? a._g / a._gn : 0, provisional: a.starts < RATING.provisional }))
     .sort((a, b) => b.rating - a.rating || b.starts - a.starts || (lc(a.name) < lc(b.name) ? -1 : lc(a.name) > lc(b.name) ? 1 : 0) || (a.pid < b.pid ? -1 : a.pid > b.pid ? 1 : 0));
+}
+/* what each race did to the ratings: "round key|race id" -> rows, in finishing order */
+function statsRatingMoves(races) {
+  const moves = new Map();
+  rateRun(races, null, moves);
+  for (const rows of moves.values()) rows.sort((a, b) => ((a.pos === null) - (b.pos === null)) || ((a.pos || 0) - (b.pos || 0)) || (lc(a.name) < lc(b.name) ? -1 : 1));
+  return moves;
+}
+const RATING_PERIODS = [["all", "All Time"], ["3m", "Last 3 months"], ["6m", "Last 6 months"], ["1y", "Last 1 Year"]];
+function ratingSince(key) {                  // 3 months = 91 days, 6 months = 182, 1 year = 365
+  const days = { "3m": 91, "6m": 182, "1y": 365 }[key];
+  if (!days) return null;
+  const d = new Date(); d.setDate(d.getDate() - days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 const fmtRating = (x) => Math.floor(x + 0.5).toLocaleString("en-US");
 
@@ -326,9 +350,11 @@ function fillStats(root, body) {
 const STATS_NAMES = ["champions", "tracks_raced", "track_records", "drivers_all_time", "ratings", "head_to_head"];
 
 function statsRatingsPage(races, champs) {
-  const all = statsRatings(races);
-  const HEADS = [["#", null], ["Driver", "name"], ["Starts", "starts"], ["Rating", "rating"], ["Last 5", "last5"], ["Peak", "peak"], ["Wins", "wins"], ["Grid rating", "grid"]];
+  let all = statsRatings(races);
+  const HEADS = [["#", null], ["Driver", "name"], ["Rating", "rating"], ["Change", "change"], ["Peak", "peak"], ["Grid rating", "grid"]];
   let key = "rating", desc = true;
+  const period = h("select", { "aria-label": "Period", onchange: () => { all = statsRatings(races, ratingSince(period.value)); draw(); } },
+    RATING_PERIODS.map(([v, t]) => option(v, t)));
   const search = h("input", { type: "search", placeholder: "Find a driver…", "aria-label": "Find a driver", oninput: () => draw() });
   const holder = h("div");
   function draw() {
@@ -337,11 +363,11 @@ function statsRatingsPage(races, champs) {
     if (key === "name") rows.sort((a, b) => (lc(a.name) < lc(b.name) ? -1 : 1) * (desc ? -1 : 1));
     else if (key) rows.sort((a, b) => (a[key] < b[key] ? -1 : a[key] > b[key] ? 1 : 0) * (desc ? -1 : 1));
     const trs = rows.map((r, i) => {
-      const ch = Math.floor(Math.abs(r.last5) + 0.5);
-      return h("tr", { class: "link", onclick: () => openCareer(champs, races, r.pid) }, td(i + 1, "c dim"), td(r.name, "b"), td(r.starts, "c dim"),
+      const ch = Math.floor(Math.abs(r.change) + 0.5);
+      return h("tr", { class: "link", onclick: () => openCareer(champs, races, r.pid) }, td(i + 1, "c dim"), td(r.name, "b"),
         h("td", { class: "c b" + (r.provisional ? " dim" : ""), title: r.provisional ? "Provisional: fewer than 3 starts" : null, text: fmtRating(r.rating) }),
-        td(ch ? (r.last5 > 0 ? "▲ " : "▼ ") + ch : "-", "c " + (!ch ? "dim" : r.last5 > 0 ? "green" : "bad")), td(fmtRating(r.peak), "c dim"),
-        td(r.wins || "-", "c " + (r.wins ? "m1" : "dim")), td(r.grid ? fmtRating(r.grid) : "-", "c dim"));
+        h("td", { class: "c " + (!ch ? "dim" : r.change > 0 ? "green" : "bad"), title: "How much the rating moved over the period", text: ch ? (r.change > 0 ? "▲ " : "▼ ") + ch : "-" }),
+        td(fmtRating(r.peak), "c dim"), td(r.grid ? fmtRating(r.grid) : "-", "c dim"));
     });
     const t = table(HEADS.map((x) => x[0]), trs);
     t.querySelectorAll("th").forEach((th, c) => {
@@ -356,7 +382,7 @@ function statsRatingsPage(races, champs) {
     clear(holder).append(t);
   }
   draw();
-  return h("div", null, h("div", { class: "toolbar" }, search, h("span", { class: "grow" }),
+  return h("div", null, h("div", { class: "toolbar" }, field("Period:", period), search, h("span", { class: "grow" }),
     h("span", { class: "hint", text: "Click a heading to sort · click a driver for their career · everyone starts on 1,000; fewer than 3 starts is provisional (grey)" })), holder);
 }
 
@@ -561,7 +587,7 @@ function statsH2hPage(champs, races) {
       const A = chartBox(300), B = chartBox(300);
       A.chart.setData([{ label: na, color: "#ff3d4f", pts: times[0] }, { label: nb, color: "#4da3ff", pts: times[1] }],
         { clip: true, integer: true, unit: 1000, yfmt: (v) => (pyRound(v) % 1000 === 0 ? fmtTime(v).slice(0, -4) : fmtTime(v)) });
-      B.chart.setData(gap.length ? [{ label: `${nb} behind ${na}`, color: cssVar("--green"), pts: gap }] : [], { yfmt: (v) => (v < 0 ? "-" : "+") + Math.abs(v).toFixed(1) + "s" });
+      B.chart.setData(gap.length ? [{ label: na, color: "#ff3d4f", pts: gap.map(([n]) => [n, 0]) }, { label: nb, color: "#4da3ff", pts: gap }] : [], { yfmt: (v) => (v < 0 ? "-" : "+") + Math.abs(v).toFixed(1) + "s" });
       clear(charts).append(tabset([{ title: "Lap times", make: () => h("div", { class: "chartwrap" }, A.cv) }, { title: "Gap over the race", make: () => h("div", { class: "chartwrap" }, B.cv,
         h("div", { class: "hint", text: "Above zero: the first driver is ahead. Needs every lap time of both drivers." })) }]).el);
     }

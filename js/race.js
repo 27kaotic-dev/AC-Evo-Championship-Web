@@ -234,11 +234,30 @@ function tChart(st, mode) {
   return h("div", { class: "chartwrap" }, gapBar, cv, h("div", { class: "hint", text: note + " Hover a line or a name in the key to highlight it." }));
 }
 
+/* what this race did to the driver ratings (the ratings are worked out from every race of every championship in the library) */
+function tRaceRatings(race) {
+  const box = h("div", null, h("div", { class: "hint", text: "Working out the ratings…" }));
+  loadStatsRecords().then((recs) => {
+    const cid = S.current ? S.current.split("/").pop() : "open file";                       // as in loadStatsRecords
+    const rows = statsRatingMoves(allRaces(recs)).get(`${cid}:${S.data.rounds[race.round].id}|${race.id}`) || [];
+    clear(box);
+    if (!rows.length) { box.append(h("div", { class: "empty", text: "The rating movement is not available for this race." })); return; }
+    const trs = rows.map((r) => {
+      const ch = Math.floor(Math.abs(r.delta) + 0.5);
+      return h("tr", null, td(r.pos || r.status, "c b " + (r.pos ? medalClass(r.pos) : "bad")), td(r.name, "b"), td(fmtRating(r.before), "c dim"), td(fmtRating(r.after), "c b"),
+        td(ch ? (r.delta > 0 ? "▲ " : "▼ ") + ch : "-", "c " + (!ch ? "dim" : r.delta > 0 ? "green" : "bad")));
+    });
+    box.append(table(["Pos", "Driver", "Before", "After", "Change"], trs),
+      h("div", { class: "hint", text: "Ratings are worked out from the finishing order of every race in the library, oldest first. Beating a higher rated driver gains more." }));
+  }).catch(() => { clear(box).append(h("div", { class: "empty", text: "The rating movement could not be worked out." })); });
+  return box;
+}
+
 /* ---------------------------------------------------------------- one race */
 function raceEntries(race, skipDns = true) {
   return race.rows.filter((r) => !skipDns || r.status !== "DNS").map((r) => ({
     key: r.d, name: driverName(r.d), color: driverColor(r.d), car: r.car, laps: r.elaps, total_ms: r.etotal, best_ms: r.ebest,
-    status: r.estatus, grid: r.egrid, laps_data: lapList(r.L) }));
+    status: r.status === "DSQ" ? "DSQ" : r.estatus, grid: r.egrid, laps_data: lapList(r.L) }));
 }
 
 function raceView(race, focusId) {
@@ -256,7 +275,7 @@ function raceView(race, focusId) {
   chips.append(chip("Laps", win ? win.laps : 0), chip("Classified", race.classified),
     chip("DNF / DSQ", calc.filter((r) => r.status === "DNF" || r.status === "DSQ").length),
     chip("Steward penalties", nPen, nPen ? cssVar("--red") : null));
-  const tail = [{ title: "Driver data", make: () => driverData(race, focusId) }];
+  const tail = [{ title: "Ratings", make: () => tRaceRatings(race) }, { title: "Driver data", make: () => driverData(race, focusId) }];
   if (race.quali && race.quali.entries.length) {
     const q = race.quali.entries.map((e) => ({ name: e.name, color: e.color, car: e.car, laps: e.laps, total_ms: e.total,
       best_ms: e.best, status: e.status, grid: e.grid, laps_data: lapList(e.L) }));
