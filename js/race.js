@@ -81,7 +81,7 @@ function roundOf(race) { return S.data.rounds[race.round]; }
 function roundTrack(rd) { return rd.track || rd.name; }
 
 /* ---------------------------------------------------------------- the analysis of a session */
-function sessionView(all, { lead = [], tail = [], ratings = null } = {}) {
+function sessionView(all, { lead = [], tail = [], result = true } = {}) {
   const info = h("span", { class: "dim" });
   const body = h("div");
   const cars = [...new Set(all.map((e) => e.car).filter(Boolean))].sort();
@@ -94,7 +94,7 @@ function sessionView(all, { lead = [], tail = [], ratings = null } = {}) {
     const st = analyse(ents);
     info.textContent = `${ents.length} drivers  ·  ${Math.max(0, ...ents.map((e) => e.laps))} laps`;
     const items = lead.map((x) => ({ title: x.title, make: x.make }));
-    items.push({ title: "Result", make: () => tResult(st, ratings) });
+    if (result) items.push({ title: "Result", make: () => tResult(st) });          // a championship race has its Classification instead
     const hasLaps = st.some((s) => s.laps.length);
     if (hasLaps) items.push({ title: "Laps", make: () => tLaps(st) });
     items.push({ title: "Best Laps", make: () => tBest(st) });
@@ -116,14 +116,11 @@ function sessionView(all, { lead = [], tail = [], ratings = null } = {}) {
   return h("div", { class: "session" }, h("div", { class: "sbar" }, sel, info), body);
 }
 
-function tResult(st, ratings) {
+function tResult(st) {
   const gb = Math.min(...st.map((s) => s.best).filter((b) => b > 0), Infinity);
   const lead = st.length ? st[0].e : null;
-  const rcells = [];                                                    // the Rating cells, filled in once the stats are worked out
   const rows = st.map((s, r) => {
     const e = s.e, mc = medalClass(r + 1);
-    const rc = ratings ? td("", "c") : null;
-    if (rc) rcells.push([e.name, rc]);
     let tg = "";
     if (r === 0) tg = e.total_ms ? fmtTime(e.total_ms) : "";
     else if (lead && lead.laps > e.laps) { const n = lead.laps - e.laps; tg = `+${n} lap${n > 1 ? "s" : ""}`; }
@@ -132,16 +129,9 @@ function tResult(st, ratings) {
     return h("tr", null, td(r + 1, "c b " + mc), nameTd(e.name, e.color), td(e.car, "dim"), td(e.laps, "c"), td(tg, "r"),
       td(fmtTime(s.best), "r " + pc(isb, "purple b")), td(s.best > gb && gb < Infinity ? fmtGap(s.best - gb) : "", "r dim"),
       td(s.cons ? s.cons.toFixed(2) + "%" : "", "c dim"), td(s.led || "", "c"), td(s.invalid.length || "", "c bad"),
-      rc, td(e.status, "c " + pc(e.status !== "Finished", "bad")));
+      td(e.status, "c " + pc(e.status !== "Finished", "bad")));
   });
-  if (ratings) ratings().then((mv) => rcells.forEach(([name, c]) => {
-    const m = mv.get(name);
-    if (!m) return;
-    const ch = Math.floor(Math.abs(m.delta) + 0.5);
-    c.append(`${fmtRating(m.after)} `, h("span", { class: !ch ? "dim" : m.delta > 0 ? "green" : "bad", text: ch ? (m.delta > 0 ? "▲ " : "▼ ") + ch : "-" }));
-    c.title = `Rating ${fmtRating(m.before)} → ${fmtRating(m.after)}`;
-  }));
-  return table(["Pos", "Driver", "Car", "Laps", "Time / gap", "Best lap", "Gap to best", "Consistency", "Laps led", "Invalid", ...(ratings ? ["Rating"] : []), "Status"], rows);
+  return table(["Pos", "Driver", "Car", "Laps", "Time / gap", "Best lap", "Gap to best", "Consistency", "Laps led", "Invalid", "Status"], rows);
 }
 
 function tLaps(st) {
@@ -283,25 +273,38 @@ function raceView(race, focusId) {
   }
   tail.push({ title: "Session info", make: () => sessionInfo(race) });
   return h("div", { class: "raceview" }, head, h("div", { class: "sub", text: bits.join("  ·  ") }), chips,
-    sessionView(raceEntries(race), { lead: [{ title: "Classification / points", make: () => classification(race, focusId) }], tail, ratings: () => raceRatingMoves(race) }));
+    sessionView(raceEntries(race), { lead: [{ title: "Classification / points", make: () => classification(race, focusId) }], tail, result: false }));
 }
 
 function classification(race, focusId) {
+  const rcells = [];                                                     // the Rating cells, filled in once the stats are worked out
   const rows = race.rows.map((r) => {
     const mc = r.status !== "DSQ" ? medalClass(r.pos) : "";
     const pcg = r.pc;
     const chg = pcg === null || pcg === undefined ? ["-", "dim"] : (pcg > 0 ? [`▲${pcg}`, "green"] : (pcg < 0 ? [`▼${-pcg}`, "bad"] : ["=", "dim"]));
     const tg = r.gap === "Leader" || r.pos === null ? (r.gap === "Leader" ? fmtTime(r.adj) : "") : r.gap;
     const ptxt = fmtPts(r.pts) + (r.fl ? "  FL" : "") + (r.pole ? "  PP" : "") + (r.ml ? "  ML" : "");
+    const rc = td("", "c");
+    rcells.push([driverName(r.d), rc]);
     const tr = h("tr", { class: pc(r.d === focusId, "focus"), id: "cl-" + r.d },
       td(r.pos || r.status, "c b " + mc), nameTd(driverName(r.d), driverColor(r.d), () => openDriver(r.d)), td(r.team, "dim"), td(r.car, "dim"),
-      td(r.grid || "-", "c"), td(chg[0], "c " + chg[1]), td(r.laps, "c"), td(r.led || "-", "c " + pc(!r.led, "dim")), td(tg, "r"),
+      td(r.grid || "-", "c"), td(chg[0], "c " + chg[1]), rc, td(r.laps, "c"), td(r.led || "-", "c " + pc(!r.led, "dim")), td(tg, "r"),
       td(fmtTime(r.best), "r " + pc(r.fl, "purple b")), td(fmtTime(r.avg), "r dim"), td(r.notes.join(", "), "c bad"),
       td(ptxt, "c b " + pc(!r.pts, "dim")), td(r.status, "c " + pc(r.status !== "Finished", "bad")));
     return tr;
   });
-  return h("div", null, table(["Pos", "Driver", "Team", "Car", "Grid", "+/-", "Laps", "Led", "Time / Gap", "Best lap", "Avg lap", "Penalty", "Pts", "Status"], rows),
-    h("div", { class: "hint", text: "Click a driver for their full profile." }));
+  const tbl = table(["Pos", "Driver", "Team", "Car", "Grid", "+/-", "Rating", "Laps", "Led", "Time / Gap", "Best lap", "Avg lap", "Penalty", "Pts", "Status"], rows);
+  raceRatingMoves(race).then((mv) => {
+    if (!mv.size) { tbl.querySelectorAll("tr").forEach((tr) => tr.children[6] && tr.children[6].remove()); return; }        // no stats: no Rating column
+    rcells.forEach(([name, c]) => {
+      const m = mv.get(name);
+      if (!m) return;
+      const ch = Math.floor(Math.abs(m.delta) + 0.5);
+      c.append(`${fmtRating(m.after)} `, h("span", { class: !ch ? "dim" : m.delta > 0 ? "green" : "bad", text: ch ? (m.delta > 0 ? "▲ " : "▼ ") + ch : "-" }));
+      c.title = `Rating ${fmtRating(m.before)} → ${fmtRating(m.after)}`;
+    });
+  });
+  return h("div", null, tbl, h("div", { class: "hint", text: "Click a driver for their full profile." }));
 }
 
 function driverData(race, focusId) {
