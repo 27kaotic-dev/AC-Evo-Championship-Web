@@ -81,7 +81,7 @@ function roundOf(race) { return S.data.rounds[race.round]; }
 function roundTrack(rd) { return rd.track || rd.name; }
 
 /* ---------------------------------------------------------------- the analysis of a session */
-function sessionView(all, { lead = [], tail = [] } = {}) {
+function sessionView(all, { lead = [], tail = [], ratings = null } = {}) {
   const info = h("span", { class: "dim" });
   const body = h("div");
   const cars = [...new Set(all.map((e) => e.car).filter(Boolean))].sort();
@@ -94,7 +94,7 @@ function sessionView(all, { lead = [], tail = [] } = {}) {
     const st = analyse(ents);
     info.textContent = `${ents.length} drivers  ·  ${Math.max(0, ...ents.map((e) => e.laps))} laps`;
     const items = lead.map((x) => ({ title: x.title, make: x.make }));
-    items.push({ title: "Result", make: () => tResult(st) });
+    items.push({ title: "Result", make: () => tResult(st, ratings) });
     const hasLaps = st.some((s) => s.laps.length);
     if (hasLaps) items.push({ title: "Laps", make: () => tLaps(st) });
     items.push({ title: "Best Laps", make: () => tBest(st) });
@@ -116,11 +116,14 @@ function sessionView(all, { lead = [], tail = [] } = {}) {
   return h("div", { class: "session" }, h("div", { class: "sbar" }, sel, info), body);
 }
 
-function tResult(st) {
+function tResult(st, ratings) {
   const gb = Math.min(...st.map((s) => s.best).filter((b) => b > 0), Infinity);
   const lead = st.length ? st[0].e : null;
+  const rcells = [];                                                    // the Rating cells, filled in once the stats are worked out
   const rows = st.map((s, r) => {
     const e = s.e, mc = medalClass(r + 1);
+    const rc = ratings ? td("", "c") : null;
+    if (rc) rcells.push([e.name, rc]);
     let tg = "";
     if (r === 0) tg = e.total_ms ? fmtTime(e.total_ms) : "";
     else if (lead && lead.laps > e.laps) { const n = lead.laps - e.laps; tg = `+${n} lap${n > 1 ? "s" : ""}`; }
@@ -129,9 +132,16 @@ function tResult(st) {
     return h("tr", null, td(r + 1, "c b " + mc), nameTd(e.name, e.color), td(e.car, "dim"), td(e.laps, "c"), td(tg, "r"),
       td(fmtTime(s.best), "r " + pc(isb, "purple b")), td(s.best > gb && gb < Infinity ? fmtGap(s.best - gb) : "", "r dim"),
       td(s.cons ? s.cons.toFixed(2) + "%" : "", "c dim"), td(s.led || "", "c"), td(s.invalid.length || "", "c bad"),
-      td(e.status, "c " + pc(e.status !== "Finished", "bad")));
+      rc, td(e.status, "c " + pc(e.status !== "Finished", "bad")));
   });
-  return table(["Pos", "Driver", "Car", "Laps", "Time / gap", "Best lap", "Gap to best", "Consistency", "Laps led", "Invalid", "Status"], rows);
+  if (ratings) ratings().then((mv) => rcells.forEach(([name, c]) => {
+    const m = mv.get(name);
+    if (!m) return;
+    const ch = Math.floor(Math.abs(m.delta) + 0.5);
+    c.append(`${fmtRating(m.after)} `, h("span", { class: !ch ? "dim" : m.delta > 0 ? "green" : "bad", text: ch ? (m.delta > 0 ? "▲ " : "▼ ") + ch : "-" }));
+    c.title = `Rating ${fmtRating(m.before)} → ${fmtRating(m.after)}`;
+  }));
+  return table(["Pos", "Driver", "Car", "Laps", "Time / gap", "Best lap", "Gap to best", "Consistency", "Laps led", "Invalid", ...(ratings ? ["Rating"] : []), "Status"], rows);
 }
 
 function tLaps(st) {
@@ -234,23 +244,13 @@ function tChart(st, mode) {
   return h("div", { class: "chartwrap" }, gapBar, cv, h("div", { class: "hint", text: note + " Hover a line or a name in the key to highlight it." }));
 }
 
-/* what this race did to the driver ratings (the ratings are worked out from every race of every championship in the library) */
-function tRaceRatings(race) {
-  const box = h("div", null, h("div", { class: "hint", text: "Working out the ratings…" }));
-  loadStatsRecords().then((recs) => {
+/* what this race did to the driver ratings: a promise of name -> move, for the Rating column of the Result tab */
+function raceRatingMoves(race) {
+  return loadStatsRecords().then((recs) => {
     const cid = S.current ? S.current.split("/").pop() : "open file";                       // as in loadStatsRecords
     const rows = statsRatingMoves(allRaces(recs)).get(`${cid}:${S.data.rounds[race.round].id}|${race.id}`) || [];
-    clear(box);
-    if (!rows.length) { box.append(h("div", { class: "empty", text: "The rating movement is not available for this race." })); return; }
-    const trs = rows.map((r) => {
-      const ch = Math.floor(Math.abs(r.delta) + 0.5);
-      return h("tr", null, td(r.pos || r.status, "c b " + (r.pos ? medalClass(r.pos) : "bad")), td(r.name, "b"), td(fmtRating(r.before), "c dim"), td(fmtRating(r.after), "c b"),
-        td(ch ? (r.delta > 0 ? "▲ " : "▼ ") + ch : "-", "c " + (!ch ? "dim" : r.delta > 0 ? "green" : "bad")));
-    });
-    box.append(table(["Pos", "Driver", "Before", "After", "Change"], trs),
-      h("div", { class: "hint", text: "Ratings are worked out from the finishing order of every race in the library, oldest first. Beating a higher rated driver gains more." }));
-  }).catch(() => { clear(box).append(h("div", { class: "empty", text: "The rating movement could not be worked out." })); });
-  return box;
+    return new Map(rows.map((r) => [r.name, r]));
+  }).catch(() => new Map());
 }
 
 /* ---------------------------------------------------------------- one race */
@@ -275,7 +275,7 @@ function raceView(race, focusId) {
   chips.append(chip("Laps", win ? win.laps : 0), chip("Classified", race.classified),
     chip("DNF / DSQ", calc.filter((r) => r.status === "DNF" || r.status === "DSQ").length),
     chip("Steward penalties", nPen, nPen ? cssVar("--red") : null));
-  const tail = [{ title: "Ratings", make: () => tRaceRatings(race) }, { title: "Driver data", make: () => driverData(race, focusId) }];
+  const tail = [{ title: "Driver data", make: () => driverData(race, focusId) }];
   if (race.quali && race.quali.entries.length) {
     const q = race.quali.entries.map((e) => ({ name: e.name, color: e.color, car: e.car, laps: e.laps, total_ms: e.total,
       best_ms: e.best, status: e.status, grid: e.grid, laps_data: lapList(e.L) }));
@@ -283,7 +283,7 @@ function raceView(race, focusId) {
   }
   tail.push({ title: "Session info", make: () => sessionInfo(race) });
   return h("div", { class: "raceview" }, head, h("div", { class: "sub", text: bits.join("  ·  ") }), chips,
-    sessionView(raceEntries(race), { lead: [{ title: "Classification / points", make: () => classification(race, focusId) }], tail }));
+    sessionView(raceEntries(race), { lead: [{ title: "Classification / points", make: () => classification(race, focusId) }], tail, ratings: () => raceRatingMoves(race) }));
 }
 
 function classification(race, focusId) {
