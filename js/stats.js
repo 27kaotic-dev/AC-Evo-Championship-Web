@@ -556,6 +556,14 @@ function openCareer(champs, races, pid) {
     h("div", { class: "sub", text: `${me.seasons} season${me.seasons !== 1 ? "s" : ""}  ·  ${me.races} races  ·  ${me.tracks} tracks` })), chips, tabs.el);
 }
 
+/* two driver names as short column labels: initials of the first and last word in brackets, e.g. (J.M) */
+function shortNames(a, b) {
+  const ini = (n) => { const w = String(n).trim().split(/\s+/); return "(" + (w.length > 1 ? [w[0], w[w.length - 1]] : w.slice(0, 1)).map((x) => x.charAt(0).toUpperCase()).join(".") + ")"; };
+  const ia = ini(a), ib = ini(b);
+  if (ia === ib) { const last = (n) => String(n).trim().split(/\s+/).pop(); return [last(a), last(b)]; }          // same initials: tell them apart by last name
+  return [ia, ib];
+}
+
 function statsH2hPage(champs, races) {
   const ranked = statsDrivers(champs, races), byName = [...ranked].sort((a, b) => (lc(a.name) < lc(b.name) ? -1 : lc(a.name) > lc(b.name) ? 1 : 0));
   if (ranked.length < 2) return h("div", { class: "empty", text: "Head-to-head needs at least two drivers." });
@@ -579,7 +587,8 @@ function statsH2hPage(champs, races) {
         td(fmtTime(x.a_best), "r " + (both && x.a_best < x.b_best ? "purple" : "")), td(fmtTime(x.b_best), "r " + (both && x.b_best < x.a_best ? "purple" : "")),
         td(x.ahead === "a" ? na : (x.ahead === "b" ? nb : "-"), "c b"));
     });
-    holder.append(table(["Championship", "Round", "Track", "Race", "Weather", "A grid", "B grid", "A finish", "B finish", "A best lap", "B best lap", "Ahead"], trs));
+    const [sa, sb] = shortNames(na, nb);
+    holder.append(table(["Championship", "Round", "Track", "Race", "Weather", `${sa} grid`, `${sb} grid`, `${sa} finish`, `${sb} finish`, `${sa} best lap`, `${sb} best lap`, "Ahead"], trs));
     function pick(i) {
       holder.querySelectorAll("tbody tr").forEach((tr, k) => tr.classList.toggle("focus", k === i));
       const race = races[res.rows[i].index], wa = race.rows.find((w) => w.pid === a.value && w.status !== "DNS"), wb = race.rows.find((w) => w.pid === b.value && w.status !== "DNS");
