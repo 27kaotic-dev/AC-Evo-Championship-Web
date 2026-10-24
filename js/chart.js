@@ -60,11 +60,14 @@ class LineChart {
       lo = Math.floor(ymin / step + 1e-9) * step;
       hi = Math.ceil(ymax / step - 1e-9) * step;
       if (hi <= lo) hi = lo + step;
+      if (ymin < 0 && step > 5 * u) lo = Math.floor(ymin / (5 * u) + 1e-9) * 5 * u;       // a little below zero (gaps): drop in 5 s sections, not a whole big step
     } else {
       const pad = span * 0.06;
       lo = ymin - pad; hi = ymax + pad;
     }
-    return [lo, hi, niceTicks(lo, hi, step)];
+    const ticks = niceTicks(lo, hi, step);
+    if (lo < 0 && (!ticks.length || ticks[0] > lo + 1e-9)) ticks.unshift(lo);
+    return [lo, hi, ticks];
   }
 
   draw() {

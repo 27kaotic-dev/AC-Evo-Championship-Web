@@ -81,7 +81,7 @@ function roundOf(race) { return S.data.rounds[race.round]; }
 function roundTrack(rd) { return rd.track || rd.name; }
 
 /* ---------------------------------------------------------------- the analysis of a session */
-function sessionView(all, { lead = [], tail = [], result = true } = {}) {
+function sessionView(all, { lead = [], tail = [], result = true, quali = false } = {}) {
   const info = h("span", { class: "dim" });
   const body = h("div");
   const cars = [...new Set(all.map((e) => e.car).filter(Boolean))].sort();
@@ -94,10 +94,10 @@ function sessionView(all, { lead = [], tail = [], result = true } = {}) {
     const st = analyse(ents);
     info.textContent = `${ents.length} drivers  ·  ${Math.max(0, ...ents.map((e) => e.laps))} laps`;
     const items = lead.map((x) => ({ title: x.title, make: x.make }));
-    if (result) items.push({ title: "Result", make: () => tResult(st) });          // a championship race has its Classification instead
+    if (result) items.push({ title: "Result", make: () => (quali ? tResultQuali(st) : tResult(st)) });          // a championship race has its Classification instead
     const hasLaps = st.some((s) => s.laps.length);
     if (hasLaps) items.push({ title: "Laps", make: () => tLaps(st) });
-    items.push({ title: "Best Laps", make: () => tBest(st) });
+    if (!quali) items.push({ title: "Best Laps", make: () => tBest(st) });             // qualifying: the Result tab has the best lap gaps and sectors
     if (st.some((s) => s.secbest.length)) items.push({ title: "Ideal Lap", make: () => tSectors(st) });          // next to Best Laps
     if (hasLaps) items.push({ title: "Consistency", make: () => tCons(st) });
     if (hasLaps) {
@@ -132,6 +132,30 @@ function tResult(st) {
       td(e.status, "c " + pc(e.status !== "Finished", "bad")));
   });
   return table(["Pos", "Driver", "Car", "Laps", "Time / gap", "Best lap", "Gap to best", "Consistency", "Laps led", "Invalid", "Status"], rows);
+}
+
+/* qualifying: the best lap with its gaps and the sectors of that lap (so no Best Laps tab) */
+function tResultQuali(st) {
+  const gb = Math.min(...st.map((s) => s.best).filter((b) => b > 0), Infinity);
+  const lead = st.length ? st[0].e : null;
+  const bls = st.map((s) => s.laps.find((l) => s.best && l.time_ms === s.best && l.valid));
+  const nsec = Math.max(0, ...bls.map((bl) => (bl ? bl.splits.length : 0)));
+  let prev = 0;
+  const rows = st.map((s, r) => {
+    const e = s.e;
+    let tg = "";
+    if (r === 0) tg = e.total_ms ? fmtTime(e.total_ms) : "";
+    else if (lead && lead.laps > e.laps) { const n = lead.laps - e.laps; tg = `+${n} lap${n > 1 ? "s" : ""}`; }
+    else if (lead && lead.total_ms && e.total_ms) tg = fmtGap(e.total_ms - lead.total_ms);
+    const isb = !!(s.best && s.best === gb);
+    const interval = s.best > 0 && prev > 0 && s.best > prev ? fmtGap(s.best - prev) : "";
+    if (s.best > 0) prev = s.best;
+    const bl = bls[r];
+    return h("tr", null, td(r + 1, "c b " + medalClass(r + 1)), nameTd(e.name, e.color), td(e.car, "dim"), td(e.laps, "c"), td(tg, "r"),
+      td(fmtTime(s.best), "r " + pc(isb, "purple b")), td(interval, "r dim"),
+      Array.from({ length: nsec }, (_, k) => td(bl && bl.splits.length > k ? fmtTime(bl.splits[k]) : "", "r dim")), td(s.invalid.length || "", "c bad"));
+  });
+  return table(["Pos", "Driver", "Car", "Laps", "Time / gap", "Best lap", "Interval", ...Array.from({ length: nsec }, (_, k) => `S${k + 1}`), "Invalid"], rows);
 }
 
 function tLaps(st) {
@@ -269,7 +293,7 @@ function raceView(race, focusId) {
   if (race.quali && race.quali.entries.length) {
     const q = race.quali.entries.map((e) => ({ name: e.name, color: e.color, car: e.car, laps: e.laps, total_ms: e.total,
       best_ms: e.best, status: e.status, grid: e.grid, laps_data: lapList(e.L) }));
-    tail.push({ title: "Qualifying", make: () => sessionView(q) });
+    tail.push({ title: "Qualifying", make: () => sessionView(q, { quali: true }) });
   }
   tail.push({ title: "Session info", make: () => sessionInfo(race) });
   return h("div", { class: "raceview" }, head, h("div", { class: "sub", text: bits.join("  ·  ") }), chips,
