@@ -138,19 +138,21 @@ class LineChart {
     const hov = this.hover !== null && this.hover < this.series.length ? this.hover : null;
     const order = this.series.map((_, k) => k).filter((k) => k !== hov);
     if (hov !== null) order.push(hov);                     // the hovered line is drawn last so it sits on top
-    g.lineJoin = "round"; g.lineCap = hov !== null ? "round" : "butt";
+    g.lineJoin = "round"; g.lineCap = "round";
+    // every line is soft by default; the one under the mouse is drawn last, a little brighter and thicker.
+    // The others look the same whether or not something is hovered, so nothing flickers.
     for (const i of order) {
       const s = this.series[i];
       if (!s.pts.length) continue;
       const col = safeColor(s.color);
-      g.globalAlpha = hov !== null && i !== hov ? 0.59 : 1;
-      g.strokeStyle = col; g.lineWidth = hov === null ? 2.2 : (i === hov ? 3.6 : 1.8);
+      g.globalAlpha = i === hov ? 0.92 : 0.41;
+      g.strokeStyle = col; g.lineWidth = i === hov ? 3 : 2;
       g.beginPath();
       s.pts.forEach(([x, y], j) => (j ? g.lineTo(mx(x), my(y)) : g.moveTo(mx(x), my(y))));
       g.stroke();
-      if ((hov === null && s.pts.length <= 40) || i === hov) {
+      if (s.pts.length <= 40 || i === hov) {
         g.fillStyle = col;
-        const rad = i === hov ? 4.8 : 3;
+        const rad = i === hov ? 4.2 : 3;
         for (const [x, y] of s.pts) { g.beginPath(); g.arc(mx(x), my(y), rad, 0, Math.PI * 2); g.fill(); }
       }
       g.globalAlpha = 1;
@@ -167,11 +169,10 @@ class LineChart {
       const s = this.series[i];
       const row = { x: W - legendW, y: ly - 1, w: legendW - 4, h: 18 };
       this.legendRows.push([i, row]);
-      const dim = hov !== null && i !== hov;
       if (i === hov) { g.fillStyle = C.panel2; g.beginPath(); g.roundRect(row.x, row.y, row.w, row.h, 5); g.fill(); }
-      g.globalAlpha = dim ? 0.59 : 1;
+      g.globalAlpha = i === hov ? 0.92 : 0.41;
       g.fillStyle = safeColor(s.color); g.beginPath(); g.roundRect(W - legendW + 4, ly + 4, 12, 4, 2); g.fill();
-      g.globalAlpha = dim ? 0.63 : 1;
+      g.globalAlpha = 1;
       g.fillStyle = i === hov ? C.hi : C.text; g.textAlign = "left"; g.textBaseline = "middle";
       g.font = `${i === hov ? "bold " : ""}11px 'Segoe UI', system-ui, sans-serif`;
       g.fillText(this.elide(g, s.label, legendW - 30), W - legendW + 22, ly + 8);
