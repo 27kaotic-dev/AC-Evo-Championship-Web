@@ -28,6 +28,9 @@ function lapsLed(entries) {
   return led;
 }
 
+const CONS_WINDOW = 1.10, CONS_SCALE = 10;        // a lap counts when it is valid and within 10% of the driver's best; score = 100 - 10 x (standard deviation as a % of the average lap)
+const medianOf = (v) => { const s = [...v].sort((a, b) => a - b), n = s.length; return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2; };
+
 function analyse(ents) {
   const st = ents.map((e, i) => {
     const laps = e.laps_data || [];
@@ -36,12 +39,12 @@ function analyse(ents) {
     const bl = vt.length ? laps.find((l) => l.time_ms === best && l.valid) : null;
     let cons = 0, avg = 0, sd = 0, med = 0;
     if (vt.length >= 3 && best) {
-      const good = vt.filter((t) => t <= best * 1.07);
+      const good = vt.filter((t) => t <= best * CONS_WINDOW);
       if (good.length >= 2) {
         avg = good.reduce((a, b) => a + b, 0) / good.length;
         sd = Math.sqrt(good.reduce((a, t) => a + (t - avg) ** 2, 0) / (good.length - 1));
-        cons = Math.max(0, 100 - (sd / avg) * 100);
-        med = [...good].sort((a, b) => a - b)[Math.floor(good.length / 2)];
+        med = medianOf(good);
+        cons = Math.max(0, 100 - CONS_SCALE * (sd / avg * 100));                    // every counted lap, slow ones included
       }
     }
     const invalid = laps.filter((l) => !l.valid).map((l) => l.lap);

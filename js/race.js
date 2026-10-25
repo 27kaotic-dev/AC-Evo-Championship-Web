@@ -30,11 +30,11 @@ function chip(title, value, color) {
 }
 
 /* column headings follow their column: centred over centred / number columns, left over names and text */
-function table(heads, rows, cls) {
+function table(heads, rows, cls, tips) {
   const first = rows.length ? rows[0].children : [];
   const align = (i) => (first[i] && /(^|\s)[cr](\s|$)/.test(first[i].className) ? "c" : "");
   const tbl = h("table", { class: "dt " + (cls || "") },
-    h("thead", null, h("tr", null, heads.map((x, i) => h("th", { class: align(i) }, x)))), h("tbody", null, rows));
+    h("thead", null, h("tr", null, heads.map((x, i) => h("th", { class: align(i), title: tips && tips[i] ? tips[i] : null }, x)))), h("tbody", null, rows));
   makeSizeable(tbl, heads.join("|") + "|" + (cls || ""));
   return h("div", { class: "tablewrap" }, tbl);
 }
@@ -128,7 +128,7 @@ function tResult(st) {
     const isb = !!(s.best && s.best === gb);
     return h("tr", null, td(r + 1, "c b " + mc), nameTd(e.name, e.color), td(e.car, "dim"), td(e.laps, "c"), td(tg, "r"),
       td(fmtTime(s.best), "r " + pc(isb, "purple b")), td(s.best > gb && gb < Infinity ? fmtGap(s.best - gb) : "", "r dim"),
-      td(s.cons ? s.cons.toFixed(2) + "%" : "", "c dim"), td(s.led || "", "c"), td(s.invalid.length || "", "c bad"),
+      td(s.cons ? s.cons.toFixed(1) : "", "c dim"), td(s.led || "", "c"), td(s.invalid.length || "", "c bad"),
       td(e.status, "c " + pc(e.status !== "Finished", "bad")));
   });
   return table(["Pos", "Driver", "Car", "Laps", "Time / gap", "Best lap", "Gap to best", "Consistency", "Laps led", "Invalid", "Status"], rows);
@@ -194,9 +194,14 @@ function tBest(st) {
 function tCons(st) {
   const rk = st.filter((s) => s.cons).sort((a, b) => b.cons - a.cons);
   const rows = rk.map((s, r) => h("tr", null, td(r + 1, "c b " + medalClass(r + 1)), nameTd(s.e.name, s.e.color),
-    td(s.cons.toFixed(2) + "%", "c " + pc(r === 0, "green b")), td(fmtTime(s.avg), "r"), td(fmtTime(s.med), "r dim"),
-    td((s.sd / 1000).toFixed(3) + " s", "r dim"), td(s.vt.filter((x) => s.best && x <= s.best * 1.07).length, "c dim")));
-  return table(["Rank", "Driver", "Consistency", "Average lap", "Median lap", "Std. deviation", "Laps counted"], rows);
+    td(s.cons.toFixed(1), "c " + pc(r === 0, "green b")), td(fmtTime(s.avg), "r"), td(fmtTime(s.med), "r dim"),
+    td((s.sd / 1000).toFixed(3) + " s", "r dim"), td(s.vt.filter((x) => s.best && x <= s.best * CONS_WINDOW).length, "c dim")));
+  return table(["Rank", "Driver", "Consistency", "Average lap", "Median lap", "Std. deviation", "Laps counted"], rows, "", [
+    "Position by consistency score", "Driver",
+    "Out of 100: 100 minus 10 x the standard deviation as a % of the average lap. Counts valid laps within 10% of the driver's best lap (needs 3 valid laps). Slow laps and mistakes lower it; cut (invalid) laps are not counted.",
+    "Average of the counted laps", "The middle lap time of the counted laps",
+    "How far the counted laps spread from the average, in seconds. Bigger = less steady",
+    "Valid laps within 10% of the driver's best lap"]);
 }
 
 function tSectors(st) {
