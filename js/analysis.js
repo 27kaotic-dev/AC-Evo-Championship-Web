@@ -28,7 +28,7 @@ function lapsLed(entries) {
   return led;
 }
 
-const CONS_WINDOW = 1.10, CONS_SCALE = 10;        // a lap counts when it is valid and within 10% of the driver's best; score = 100 - 10 x (standard deviation as a % of the average lap)
+const CONS_WINDOW = 1.08, CONS_SCALE = 10;        // a lap counts when it is valid and within 8% of the driver's best; score = 100 - 10 x (standard deviation as a % of the average lap)
 const medianOf = (v) => { const s = [...v].sort((a, b) => a - b), n = s.length; return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2; };
 
 function analyse(ents) {

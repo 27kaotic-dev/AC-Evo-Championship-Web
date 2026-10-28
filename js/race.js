@@ -198,10 +198,10 @@ function tCons(st) {
     td((s.sd / 1000).toFixed(3) + " s", "r dim"), td(s.ct.filter((x) => s.best && x <= s.best * CONS_WINDOW).length, "c dim")));
   return table(["Rank", "Driver", "Consistency", "Average lap", "Median lap", "Std. deviation", "Laps counted"], rows, "", [
     "Position by consistency score", "Driver",
-    "Out of 100: 100 minus 10 x the standard deviation as a % of the average lap. Counts valid laps within 10% of the driver's best lap (needs 3 laps). Laps with a track cut or marked invalid are not counted; slow laps and mistakes lower it.",
+    "Out of 100: 100 minus 10 x the standard deviation as a % of the average lap. Counts valid laps within 8% of the driver's best lap (needs 3 laps). Laps with a track cut or marked invalid are not counted; slow laps and mistakes lower it.",
     "Average of the counted laps", "The middle lap time of the counted laps",
     "How far the counted laps spread from the average, in seconds. Bigger = less steady",
-    "Laps within 10% of the driver's best lap, leaving out cut and invalid laps"]);
+    "Laps within 8% of the driver's best lap, leaving out cut and invalid laps"]);
 }
 
 function tSectors(st) {
