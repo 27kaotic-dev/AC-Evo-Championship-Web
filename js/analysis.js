@@ -35,11 +35,12 @@ function analyse(ents) {
   const st = ents.map((e, i) => {
     const laps = e.laps_data || [];
     const vt = laps.filter((l) => l.time_ms > 0 && l.valid).map((l) => l.time_ms);
+    const ct = laps.filter((l) => l.time_ms > 0 && l.valid && !l.cut).map((l) => l.time_ms);       // laps counted for consistency: no cut, not invalid
     const best = vt.length ? Math.min(...vt) : (e.best_ms || 0);
     const bl = vt.length ? laps.find((l) => l.time_ms === best && l.valid) : null;
     let cons = 0, avg = 0, sd = 0, med = 0;
-    if (vt.length >= 3 && best) {
-      const good = vt.filter((t) => t <= best * CONS_WINDOW);
+    if (ct.length >= 3 && best) {
+      const good = ct.filter((t) => t <= best * CONS_WINDOW);
       if (good.length >= 2) {
         avg = good.reduce((a, b) => a + b, 0) / good.length;
         sd = Math.sqrt(good.reduce((a, t) => a + (t - avg) ** 2, 0) / (good.length - 1));
@@ -54,7 +55,7 @@ function analyse(ents) {
       const v = laps.filter((l) => l.splits.length > k && l.splits[k] > 0 && l.valid).map((l) => l.splits[k]);
       secbest.push(v.length ? Math.min(...v) : 0);
     }
-    return { e, i, laps, best, blap: bl ? bl.lap : 0, cons, avg, sd, med, invalid, secbest, led: 0, vt, cum: [] };
+    return { e, i, laps, best, blap: bl ? bl.lap : 0, cons, avg, sd, med, invalid, secbest, led: 0, vt, ct, cum: [] };
   });
   for (const s of st) {
     if (s.laps.length && s.laps.every((l) => l.time_ms > 0)) {
@@ -68,4 +69,4 @@ function analyse(ents) {
 }
 
 /* an export row / quali entry -> the entry shape above */
-function lapList(L) { return (L || []).map((l, n) => ({ lap: n + 1, time_ms: l[0], valid: !!l[1], splits: l[2] || [] })); }
+function lapList(L) { return (L || []).map((l, n) => ({ lap: n + 1, time_ms: l[0], valid: !!l[1], splits: l[2] || [], cut: !!l[3] })); }

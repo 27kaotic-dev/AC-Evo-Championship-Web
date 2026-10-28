@@ -195,13 +195,13 @@ function tCons(st) {
   const rk = st.filter((s) => s.cons).sort((a, b) => b.cons - a.cons);
   const rows = rk.map((s, r) => h("tr", null, td(r + 1, "c b " + medalClass(r + 1)), nameTd(s.e.name, s.e.color),
     td(s.cons.toFixed(1), "c " + pc(r === 0, "green b")), td(fmtTime(s.avg), "r"), td(fmtTime(s.med), "r dim"),
-    td((s.sd / 1000).toFixed(3) + " s", "r dim"), td(s.vt.filter((x) => s.best && x <= s.best * CONS_WINDOW).length, "c dim")));
+    td((s.sd / 1000).toFixed(3) + " s", "r dim"), td(s.ct.filter((x) => s.best && x <= s.best * CONS_WINDOW).length, "c dim")));
   return table(["Rank", "Driver", "Consistency", "Average lap", "Median lap", "Std. deviation", "Laps counted"], rows, "", [
     "Position by consistency score", "Driver",
-    "Out of 100: 100 minus 10 x the standard deviation as a % of the average lap. Counts valid laps within 10% of the driver's best lap (needs 3 valid laps). Slow laps and mistakes lower it; cut (invalid) laps are not counted.",
+    "Out of 100: 100 minus 10 x the standard deviation as a % of the average lap. Counts valid laps within 10% of the driver's best lap (needs 3 laps). Laps with a track cut or marked invalid are not counted; slow laps and mistakes lower it.",
     "Average of the counted laps", "The middle lap time of the counted laps",
     "How far the counted laps spread from the average, in seconds. Bigger = less steady",
-    "Valid laps within 10% of the driver's best lap"]);
+    "Laps within 10% of the driver's best lap, leaving out cut and invalid laps"]);
 }
 
 function tSectors(st) {
@@ -285,7 +285,7 @@ function raceView(race, focusId) {
   const rd = roundOf(race), calc = race.rows;
   const rowOf = (id) => calc.find((r) => r.d === id);
   const head = h("h2", { class: "ph", text: `Round ${race.round + 1}  ·  ${roundTrack(rd)}  ·  ${race.name}` });
-  const bits = [rd.date, race.weather ? `weather: ${race.weather}` : "", `scoring: ${race.preset}`, `source: ${race.source || "manual"}`].filter(Boolean);
+  const bits = [fmtDate(normDate(rd.date)), race.weather ? `weather: ${race.weather}` : "", `scoring: ${race.preset}`, `source: ${race.source || "manual"}`].filter(Boolean);
   const chips = h("div", { class: "chips" });
   const win = race.leader ? rowOf(race.leader) : null;
   if (win) chips.append(chip("Winner", driverName(race.leader), cssVar("--gold")));
@@ -319,14 +319,14 @@ function classification(race, focusId) {
     rcells.push([driverName(r.d), rc]);
     const tr = h("tr", { class: pc(r.d === focusId, "focus"), id: "cl-" + r.d },
       td(r.pos || r.status, "c b " + mc), nameTd(driverName(r.d), driverColor(r.d), () => openDriver(r.d)), td(r.team, "dim"), td(r.car, "dim"),
-      td(r.grid || "-", "c"), td(chg[0], "c " + chg[1]), rc, td(r.laps, "c"), td(r.led || "-", "c " + pc(!r.led, "dim")), td(tg, "r"),
-      td(fmtTime(r.best), "r " + pc(r.fl, "purple b")), td(fmtTime(r.avg), "r dim"), td(r.notes.join(", "), "c bad"),
+      td(r.grid || "-", "c"), td(chg[0], "c " + chg[1]), td(r.laps, "c"), td(r.led || "-", "c " + pc(!r.led, "dim")), td(tg, "r"),
+      td(fmtTime(r.best), "r " + pc(r.fl, "purple b")), td(fmtTime(r.avg), "r dim"), rc, td(r.notes.join(", "), "c bad"),
       td(ptxt, "c b " + pc(!r.pts, "dim")), td(r.status, "c " + pc(r.status !== "Finished", "bad")));
     return tr;
   });
-  const tbl = table(["Pos", "Driver", "Team", "Car", "Grid", "+/-", "Rating", "Laps", "Led", "Time / Gap", "Best lap", "Avg lap", "Penalty", "Pts", "Status"], rows);
+  const tbl = table(["Pos", "Driver", "Team", "Car", "Grid", "+/-", "Laps", "Led", "Time / Gap", "Best lap", "Avg lap", "Rating", "Penalty", "Pts", "Status"], rows);
   raceRatingMoves(race).then((mv) => {
-    if (!mv.size) { tbl.querySelectorAll("tr").forEach((tr) => tr.children[6] && tr.children[6].remove()); return; }        // no stats: no Rating column
+    if (!mv.size) { tbl.querySelectorAll("tr").forEach((tr) => tr.children[11] && tr.children[11].remove()); return; }        // no stats: no Rating column
     rcells.forEach(([name, c]) => {
       const m = mv.get(name);
       if (!m) return;
@@ -398,7 +398,7 @@ function roundData(rd) {
 function roundView(rd, rdIndex) {
   const { races, list, gbest } = roundData(rd);
   const presets = [...new Set(races.map((r) => r.preset))].sort();
-  const bits = [rd.date, `${races.length} of ${rd.races.length} races`, "scoring: " + presets.join(", ")].filter(Boolean);
+  const bits = [fmtDate(normDate(rd.date)), `${races.length} of ${rd.races.length} races`, "scoring: " + presets.join(", ")].filter(Boolean);
   const chips = h("div", { class: "chips" });
   if (list.length) {
     chips.append(chip("Round leader", `${driverName(list[0].d)}  ${fmtPts(list[0].pts)} pts`, cssVar("--gold")));

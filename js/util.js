@@ -113,3 +113,40 @@ if (window.ResizeObserver) new ResizeObserver(queueFit).observe(document.documen
 
 /* a label and its control kept together when the toolbar wraps */
 function field(text, ...controls) { return h("span", { class: "field" }, h("label", { text }), controls); }
+
+/* ---------------------------------------------------------------- dates
+   Dates are kept as YYYY-MM-DD.  Typed dates (15-10-26, 10/15/2026) are read in the viewer's own date order, unless that
+   gives no real date; they are shown the way the viewer's browser writes dates. */
+let DATE_ORDER_OVERRIDE = null;          // tests set this to "DMY", "MDY" or "YMD"
+
+function dateOrder() {
+  if (DATE_ORDER_OVERRIDE) return DATE_ORDER_OVERRIDE;
+  try {
+    const o = new Intl.DateTimeFormat(undefined).formatToParts(new Date(2001, 10, 25))
+      .filter((p) => p.type === "day" || p.type === "month" || p.type === "year").map((p) => p.type[0].toUpperCase()).join("");
+    if (o.length === 3) return o;
+  } catch (e) { /* fall through */ }
+  return "DMY";
+}
+
+function normDate(text, order) {
+  const raw = String(text || "").trim(), s = raw.replace(/\s+/g, "").replace(/\.$/, "");
+  const real = (y, mo, d) => { const t = new Date(Date.UTC(y, mo - 1, d)); return t.getUTCFullYear() === y && t.getUTCMonth() === mo - 1 && t.getUTCDate() === d ? t.toISOString().slice(0, 10) : null; };
+  let m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?!\d)/);
+  if (m) return real(+m[1], +m[2], +m[3]) || raw;
+  m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2}|\d{4})$/);
+  if (!m) return raw;
+  const a = +m[1], b = +m[2], c = +m[3], yy = c < 100 ? c + 2000 : c;
+  order = order || dateOrder();
+  const cands = order === "YMD" && m[3].length === 2 ? [[a + 2000, b, c], [yy, b, a]]
+    : (order === "MDY" ? [[yy, a, b], [yy, b, a]] : [[yy, b, a], [yy, a, b]]);
+  for (const [y, mo, d] of cands) { const r = real(y, mo, d); if (r) return r; }
+  return raw;
+}
+
+function fmtDate(iso) {
+  const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return String(iso || "");
+  const t = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  return isNaN(t) ? String(iso) : t.toLocaleDateString(undefined, { timeZone: "UTC", year: "numeric", month: "2-digit", day: "2-digit" });
+}

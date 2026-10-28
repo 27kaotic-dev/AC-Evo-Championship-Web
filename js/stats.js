@@ -30,7 +30,7 @@ function champRecord(data, cid) {
     }
     return {
       cid, rid: r.id, champ: data.name, round_key: `${cid}:${rd.id}`, round: r.round + 1, round_name: rd.name, track, layout: layout || "",
-      tkey: trackKey(track, layout), date: String(rd.date || meta.date || ""), weather: r.weather || "", race: r.name,
+      tkey: trackKey(track, layout), date: normDate(rd.date || meta.date || ""), weather: r.weather || "", race: r.name,
       rows: r.rows.map((w) => ({
         pid: pidOf(w.d), name: nameOf(w.d), car: String(w.car || ""), pos: w.pos, grid: w.grid, status: w.status, laps: w.laps,
         best: w.best, pts: w.pts, led: w.led, fl: !!w.fl, pole: !!w.pole, ml: !!w.ml, L: (w.L || []).map((l) => [l[0], !!l[1]]),
@@ -403,7 +403,7 @@ function statsChampionsPage(champs, races) {
     }
     const cards = list.map((x) => {
       const fin = x.state === "done", color = cssVar(fin ? "--gold" : "--green");
-      const dates = x.first && x.last !== x.first ? `${x.first}  →  ${x.last}` : (x.first || "no dates");
+      const dates = x.first && x.last !== x.first ? `${fmtDate(x.first)}  →  ${fmtDate(x.last)}` : (fmtDate(x.first) || "no dates");
       const rounds = `${x.rounds} round${x.rounds === 1 ? "" : "s"}` + (fin ? "" : " so far");
       const top = x.podium.map((p, k) => (p ? h("div", { class: "lc-top" },
         h("span", { class: "rk-n", style: { color: medalColor(k + 1) || cssVar("--text") }, text: String(k + 1) }),
@@ -443,7 +443,7 @@ function statsTracksPage(races) {
     const shown = n ? sorted.slice(0, n) : sorted, rest = n ? sorted.slice(n) : [];
     const out = shown.map((x, i) => ({ label: trackLabel(x.track, x.layout), value: x[key], color: sliceColor(i),
       tip: [trackLabel(x.track, x.layout), `${x[key]} ${key}  (${((100 * x[key]) / total).toFixed(1)}%)`,
-        `${x.rounds} rounds · ${x.races} races · ${x.champs} championships · ${x.drivers} drivers`, `Last raced ${x.last || "-"}`] }));
+        `${x.rounds} rounds · ${x.races} races · ${x.champs} championships · ${x.drivers} drivers`, `Last raced ${fmtDate(x.last) || "-"}`] }));
     if (rest.length) {
       const v = rest.reduce((s, x) => s + x[key], 0);
       out.push({ label: `Other (${rest.length} tracks)`, value: v, color: grey,
@@ -460,7 +460,7 @@ function statsTracksPage(races) {
     bars.chart.setData(out.map((it, i) => ({ ...it, color: hasOther && i === out.length - 1 ? grey : accent })), "No races yet.");
   }
   draw();
-  const trs = rows.map((x) => h("tr", null, td(x.track, "b"), td(x.layout, "dim"), td(x.rounds, "c"), td(x.races, "c"), td(x.champs, "c"), td(x.drivers, "c"), td(x.last, "c dim")));
+  const trs = rows.map((x) => h("tr", null, td(x.track, "b"), td(x.layout, "dim"), td(x.rounds, "c"), td(x.races, "c"), td(x.champs, "c"), td(x.drivers, "c"), td(fmtDate(x.last), "c dim")));
   return h("div", null, h("div", { class: "toolbar" }, field("Chart:", kind), field("Show:", top), field("Count:", metric), h("span", { class: "grow" }),
     h("span", { class: "hint", text: "The table below always lists every track" })), pieWrap, barsWrap,
   h("div", { style: { height: "12px" } }), table(["Track", "Layout", "Rounds", "Races", "Championships", "Drivers", "Last raced"], trs));
@@ -479,9 +479,9 @@ function statsRecordsPage(races) {
     const trs = rows.map((x) => {
       const rr = `R${x.round}  ${x.race}`;
       return tk ? h("tr", null, td(x.pos, "c b " + medalClass(x.pos)), td(x.name, "b"), td(fmtTime(x.best), "r " + (x.pos === 1 ? "purple b" : "")),
-        td(x.gap ? fmtGap(x.gap) : "", "r dim"), td(x.car, "dim"), td(x.weather || "-", "c dim"), td(x.champ, "dim"), td(rr, "dim"), td(x.date, "c dim"), td(x.starts, "c dim"))
+        td(x.gap ? fmtGap(x.gap) : "", "r dim"), td(x.car, "dim"), td(x.weather || "-", "c dim"), td(x.champ, "dim"), td(rr, "dim"), td(fmtDate(x.date), "c dim"), td(x.starts, "c dim"))
         : h("tr", null, td(trackLabel(x.track, x.layout), "b"), td(x.car, "dim"), td(fmtTime(x.best), "r purple b"), td(x.name, "b"), td(x.weather || "-", "c dim"),
-          td(x.champ, "dim"), td(rr, "dim"), td(x.date, "c dim"));
+          td(x.champ, "dim"), td(rr, "dim"), td(fmtDate(x.date), "c dim"));
     });
     clear(holder).append(table(tk ? ["Pos", "Driver", "Best lap", "Gap", "Car", "Weather", "Championship", "Round / race", "Date", "Races"]
       : ["Track", "Car", "Record", "Driver", "Weather", "Championship", "Round / race", "Date"], trs));
@@ -542,7 +542,7 @@ function openCareer(champs, races, pid) {
     td(fmtPts(s.total), "c"), td(s.wins, "c"), td(s.podiums, "c"), td(s.poles, "c"), td(s.fls, "c"), td(s.dnfs, "c"), td(s.starts, "c")));
   const tracks = info.tracks.map((x) => h("tr", null, td(trackLabel(x.track, x.layout), "b"), td(x.starts, "c"),
     td(x.best_finish ? `P${x.best_finish}` : "-", "c " + medalClass(x.best_finish)), td(x.avg_finish ? x.avg_finish.toFixed(1) : "-", "c dim"),
-    td(fmtTime(x.best_lap), "r"), td(x.best_car, "dim"), td(x.last, "c dim")));
+    td(fmtTime(x.best_lap), "r"), td(x.best_car, "dim"), td(fmtDate(x.last), "c dim")));
   const tabs = tabset([
     { title: "Seasons", make: () => table(["Championship", "Result", "Points", "Wins", "Podiums", "Poles", "FL", "DNFs", "Races"], seasons) },
     { title: "Tracks", make: () => table(["Track", "Starts", "Best finish", "Avg finish", "Best lap", "Car", "Last raced"], tracks) },
@@ -564,6 +564,14 @@ function shortNames(a, b) {
   return [ia, ib];
 }
 
+const H2H_A = "#ff3d4f", H2H_B = "#4da3ff";      // the colours of the two lines in the charts
+
+/* a chip for two drivers: "a - b", each number in its driver's colour */
+function pairChip(title, a, b) {
+  return h("div", { class: "chip" }, h("div", { class: "chip-t", text: title.toUpperCase() }),
+    h("div", { class: "chip-v" }, h("span", { style: { color: H2H_A }, text: String(a) }), h("span", { class: "dim", text: " - " }), h("span", { style: { color: H2H_B }, text: String(b) })));
+}
+
 function statsH2hPage(champs, races) {
   const ranked = statsDrivers(champs, races), byName = [...ranked].sort((a, b) => (lc(a.name) < lc(b.name) ? -1 : lc(a.name) > lc(b.name) ? 1 : 0));
   if (ranked.length < 2) return h("div", { class: "empty", text: "Head-to-head needs at least two drivers." });
@@ -576,16 +584,16 @@ function statsH2hPage(champs, races) {
     if (a.value === b.value) { holder.append(h("div", { class: "empty", text: "Pick two different drivers." })); return; }
     const na = a.options[a.selectedIndex].text, nb = b.options[b.selectedIndex].text, res = statsH2h(races, a.value, b.value), s = res.summary;
     if (!s.n) { holder.append(h("div", { class: "empty", text: `${na} and ${nb} have not raced in the same race yet.` })); return; }
-    chips.append(chip("Races together", s.n), chip("Finished ahead", `${s.a_ahead} - ${s.b_ahead}`, cssVar("--gold")), chip("Points", `${fmtPts(s.a_pts)} - ${fmtPts(s.b_pts)}`, cssVar("--accent")),
-      chip("Avg finish", s.a_avg && s.b_avg ? `${s.a_avg.toFixed(1)} - ${s.b_avg.toFixed(1)}` : "-"), chip("Started ahead", `${s.a_grid} - ${s.b_grid}`, cssVar("--blue")),
-      chip("Faster best lap", `${s.a_faster} - ${s.b_faster}`, cssVar("--purple")));
-    if (s.avg_best_gap) chips.append(chip("Avg best-lap gap", `${s.avg_best_gap < 0 ? na : nb} by ${(Math.abs(s.avg_best_gap) / 1000).toFixed(3)}s`));
+    chips.append(chip("Races together", s.n), pairChip("Finished ahead", s.a_ahead, s.b_ahead), pairChip("Points", fmtPts(s.a_pts), fmtPts(s.b_pts)),
+      s.a_avg && s.b_avg ? pairChip("Avg finish", (pyRound(s.a_avg * 10) / 10).toFixed(1), (pyRound(s.b_avg * 10) / 10).toFixed(1)) : chip("Avg finish", "-"), pairChip("Started ahead", s.a_grid, s.b_grid),
+      pairChip("Faster best lap", s.a_faster, s.b_faster));
+    if (s.avg_best_gap) chips.append(chip("Avg best-lap gap", `${s.avg_best_gap < 0 ? na : nb} by ${(Math.abs(s.avg_best_gap) / 1000).toFixed(3)}s`, s.avg_best_gap < 0 ? H2H_A : H2H_B));
     const trs = res.rows.map((x, i) => {
       const fa = x.a_pos ? `P${x.a_pos}` : x.a_status, fb = x.b_pos ? `P${x.b_pos}` : x.b_status, both = x.a_best && x.b_best;
       return h("tr", { class: "link", onclick: () => pick(i), id: "h2h-" + i }, td(x.champ, "dim"), td(x.round, "c"), td(trackLabel(x.track, x.layout), "b"), td(x.race), td(x.weather || "-", "c dim"),
         td(x.a_grid || "-", "c"), td(x.b_grid || "-", "c"), td(fa, "c " + (x.ahead === "a" ? "green b" : "")), td(fb, "c " + (x.ahead === "b" ? "green b" : "")),
         td(fmtTime(x.a_best), "r " + (both && x.a_best < x.b_best ? "purple" : "")), td(fmtTime(x.b_best), "r " + (both && x.b_best < x.a_best ? "purple" : "")),
-        td(x.ahead === "a" ? na : (x.ahead === "b" ? nb : "-"), "c b"));
+        h("td", { class: "c b", style: x.ahead ? { color: x.ahead === "a" ? H2H_A : H2H_B } : null, text: x.ahead === "a" ? na : (x.ahead === "b" ? nb : "-") }));
     });
     const [sa, sb] = shortNames(na, nb);
     holder.append(table(["Championship", "Round", "Track", "Race", "Weather", `${sa} grid`, `${sb} grid`, `${sa} finish`, `${sb} finish`, `${sa} best lap`, `${sb} best lap`, "Ahead"], trs));
