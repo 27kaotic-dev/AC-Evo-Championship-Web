@@ -150,7 +150,7 @@ input[type=range] { vertical-align: middle; width: 90px; accent-color: var(--acc
 .cell .pn { position: absolute; left: 7px; top: 3px; font-size: 10.5px; color: var(--dim); font-weight: 700; }
 .cell.m1 .pn, .cell.m2 .pn, .cell.m3 .pn { color: inherit; }
 .cell .tags { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column-reverse; align-items: flex-start; font-size: 9.5px; line-height: 1.15; font-weight: 800; }
-.cell.dropped .cp, .cell.dropped .cs { text-decoration: line-through; opacity: .45; }
+.cell.dropped .cp, .cell.dropped .cs { text-decoration: underline; text-decoration-color: #ff3d4f; text-decoration-thickness: 2px; text-underline-offset: 3px; color: color-mix(in srgb, currentColor 45%, transparent); }   /* faded result, bright red line under it */
 td.link:hover .cell { border-color: var(--cell-edge); }
 .st td.tot { width: 84px; min-width: 84px; }
 .total { height: 44px; margin: 2px; border-radius: 7px; background: var(--total); display: grid; place-items: center; font-size: 19px; font-weight: 800; color: var(--hi); }

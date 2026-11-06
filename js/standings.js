@@ -101,7 +101,7 @@ function viewStandings() {
         h("td", { class: "sticky c1 nm" + (t ? "" : " link"), onclick: t ? null : () => openDriver(r.id) },
           h("span", { class: "bar big", style: { background: safeColor(r.color) } }), h("span", { class: "nt" }, h("b", { text: r.name }), sub ? h("small", { text: sub }) : null),
           lp[r.id] ? h("span", { class: "lp", title: "Licence points", text: `LP ${lp[r.id]}` }) : null),
-        d.cols.map((c, ci) => resultCell(r.cells[String(ci)] || (c.done && !t ? DNS_CELL : null), c.done && r.cells[String(ci)] ? () => openRace(c.race, t ? null : r.id) : null)),
+        d.cols.map((c, ci) => resultCell(r.cells[String(ci)] || (c.done && !t ? { ...DNS_CELL, dropped: (r.dropped || []).includes(ci) } : null), c.done && r.cells[String(ci)] ? () => openRace(c.race, t ? null : r.id) : null)),
         h("td", { class: "tot" }, h("div", { class: "total", title: r.cpen ? `Includes ${fmtPts(r.cpen)} pts championship penalty` : null, text: fmtPts(r.total) })),
         ["wins", "podiums", "poles", "fls", "mls"].map((k) => h("td", { class: "stat " + (r[k] ? "" : "dim"), text: r[k] ? String(r[k]) : "-" })));
     });
