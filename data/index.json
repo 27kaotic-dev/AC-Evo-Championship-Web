@@ -5,27 +5,27 @@
     "state": "live",
     "rounds": 5,
     "races": 10,
-    "done": 6,
+    "done": 8,
     "drivers": 24,
-    "last": "R3  Donington Park GP  ·  Race 2",
-    "last_date": "2026-10-29",
-    "next": "R4  Red Bull Ring GP  ·  Race 1",
-    "next_date": "2026-11-05",
+    "last": "R4  Red Bull Ring GP  ·  Race 2",
+    "last_date": "2026-11-05",
+    "next": "R5  Brands Hatch GP  ·  Race 1",
+    "next_date": "2026-11-12",
     "top": [
       [
         "glynn dewar",
-        144.0
+        188.0
+      ],
+      [
+        "Josh McLaughlin",
+        162.0
       ],
       [
         "steven Melling",
-        122.0
-      ],
-      [
-        "Damian J",
-        115.0
+        161.0
       ]
     ],
-    "updated": "2026-10-30",
+    "updated": "2026-11-07",
     "archived": false
   }
 ]
