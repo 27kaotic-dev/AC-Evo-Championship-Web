@@ -225,3 +225,14 @@ canvas.chart.bars { height: 120px; }
 .field select { min-width: 0; flex: 1 1 auto; }
 
 canvas.chart.pie { height: 300px; }
+
+/* a championship's background picture behind the left side of the Standings page, fading out to the plain page */
+:root, :root[data-theme="dark"] { --pan-rgb: 23,26,35; }
+:root[data-theme="light"] { --pan-rgb: 255,255,255; }
+.page.hasbg { position: relative; isolation: isolate; }
+.page.hasbg::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 70%; z-index: -1; border-radius: 10px 0 0 10px; pointer-events: none;
+  background: var(--bgimg) center / cover no-repeat;
+  -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,calc(1 - var(--ba0))) 0%, rgba(0,0,0,calc(1 - var(--ba1))) 43%, rgba(0,0,0,calc(1 - var(--ba2))) 79%, rgba(0,0,0,0) 100%);
+  mask-image: linear-gradient(to right, rgba(0,0,0,calc(1 - var(--ba0))) 0%, rgba(0,0,0,calc(1 - var(--ba1))) 43%, rgba(0,0,0,calc(1 - var(--ba2))) 79%, rgba(0,0,0,0) 100%); }
+.page.hasbg .tablewrap.standings { background: linear-gradient(to right, rgba(var(--pan-rgb), var(--ba0)) 0%, rgba(var(--pan-rgb), var(--ba1)) 30%, rgba(var(--pan-rgb), var(--ba2)) 55%, rgba(var(--pan-rgb), .97) 70%); }
+.page.hasbg .tablewrap.standings thead th, .page.hasbg .tablewrap.standings tbody td { background-color: transparent; }

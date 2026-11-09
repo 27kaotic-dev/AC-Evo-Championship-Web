@@ -4,7 +4,7 @@
 function standingsSub(st, team) {
   const d = S.data;
   const done = d.scored.length, all = d.cols.length;
-  const drop = d.drop_worst ? `  ·  best results count (worst ${d.drop_worst} dropped)` : "";
+  const drop = d.drop_worst ? `  ·  best results count (worst ${d.drop_worst} ${d.drop_by === "round" ? (d.drop_worst === 1 ? "round" : "rounds") : "dropped"}${d.drop_by === "round" ? " dropped" : ""})` : "";
   const best = team && d.team_best_n ? `  ·  the best ${d.team_best_n} drivers of a team score in each race` : "";
   return `${done} of ${all} races completed  ·  ${st.length} ${team ? "teams" : "drivers"}${drop}${best}`;
 }
@@ -32,9 +32,21 @@ function resultCell(c, onclick) {
   return h("td", { class: "rc" + (onclick ? " link" : ""), onclick }, cell);
 }
 
+/* the championship's background picture (a file next to its data file), soft behind the left side of the table */
+function standingsBackground(root) {
+  const b = S.data.branding;
+  if (!b || !b.background || !S.current) return;
+  const s = Math.min(100, Math.max(0, +b.strength || 50)) / 100, a0 = 1 - s;
+  root.classList.add("hasbg");
+  const url = new URL(S.current.replace(/[^/]*$/, "") + encodeURIComponent(b.background), document.baseURI).href;       // absolute: a url() in a CSS variable is read relative to the stylesheet
+  root.style.setProperty("--bgimg", `url("${url}")`);
+  [a0, a0 + (1 - a0) * 0.36, a0 + (1 - a0) * 0.84, 1].forEach((v, i) => root.style.setProperty("--ba" + i, v.toFixed(3)));
+}
+
 function viewStandings() {
   const d = S.data, team = S.mode === "teams", st = d.standings[S.mode];
   const root = h("div", { class: "page" });
+  standingsBackground(root);
   const modeSel = h("select", { "aria-label": "View", onchange: () => { S.mode = modeSel.value; render(); } },
     option("drivers", "Drivers", !team), option("teams", "Teams", team));
   const holder = h("div");

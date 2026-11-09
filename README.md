@@ -8,6 +8,7 @@ It is a **viewer**. Importing results, editing, penalties and scoring all stay i
 
 1. In the desktop program open the championship and choose **File > Export for the web viewer…**. That writes a file such as `thursday_league.web.json`.
 2. Copy it into this repo's `data` folder. Keep the `.web.json` ending.
+   If the championship has a Standings background, the export also writes a `.background.jpg` with the same name: copy that into `data` too.
 3. Push to GitHub. A small workflow rebuilds `data/index.json` (the list behind the **Champ Library** page) by itself, and the page shows the new championship a minute or so later. If you would rather not wait for it, run `python tools/make_index.py` first and push the changed `index.json` with the file.
 
 To update a championship (new race results), export it again over the same file name and push. To keep a finished season, just leave its file where it is: every file in `data` is a card in the library, live ones first, finished ones after.
