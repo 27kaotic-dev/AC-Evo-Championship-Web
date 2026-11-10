@@ -120,7 +120,9 @@ function viewStandings() {
         h("td", { class: "tot" }, h("div", { class: "total", title: r.cpen ? `Includes ${fmtPts(r.cpen)} pts championship penalty` : null, text: fmtPts(r.total) })),
         ["wins", "podiums", "poles", "fls", "mls"].map((k) => h("td", { class: "stat " + (r[k] ? "" : "dim"), text: r[k] ? String(r[k]) : "-" })));
     });
-    holder.append(h("div", { class: "tablewrap standings" }, h("table", { class: "st" }, h("thead", null, r1, r2), h("tbody", null, body))));
+    const wrap = h("div", { class: "tablewrap standings" }, h("table", { class: "st" }, h("thead", null, r1, r2), h("tbody", null, body)));
+    wrap.addEventListener("scroll", () => wrap.classList.toggle("hscroll", wrap.scrollLeft > 0), { passive: true });       // sideways scroll: see the background picture rules in style.css
+    holder.append(wrap);
     applyLayout();
   }
   S.renderStandings = render;

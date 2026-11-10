@@ -236,4 +236,5 @@ canvas.chart.pie { height: 300px; }
   -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,calc(1 - var(--ba0))) 0%, rgba(0,0,0,calc(1 - var(--ba1))) 43%, rgba(0,0,0,calc(1 - var(--ba2))) 79%, rgba(0,0,0,0) 100%);
   mask-image: linear-gradient(to right, rgba(0,0,0,calc(1 - var(--ba0))) 0%, rgba(0,0,0,calc(1 - var(--ba1))) 43%, rgba(0,0,0,calc(1 - var(--ba2))) 79%, rgba(0,0,0,0) 100%); }
 .page.hasbg .tablewrap.standings { background: linear-gradient(to right, rgba(var(--pan-rgb), var(--ba0)) 0%, rgba(var(--pan-rgb), var(--ba1)) 30%, rgba(var(--pan-rgb), var(--ba2)) 55%, rgba(var(--pan-rgb), .97) 70%); }
-.page.hasbg .tablewrap.standings thead th, .page.hasbg .tablewrap.standings tbody td { background-color: transparent; }
+.page.hasbg .tablewrap.standings tbody td { background-color: transparent; }   /* the headings stay solid so they can be read over the rows when scrolling */
+.page.hasbg .tablewrap.standings.hscroll tbody td.sticky { background-color: var(--panel); }   /* scrolled sideways: the Pos / Driver columns go solid, so the races do not show through them */
