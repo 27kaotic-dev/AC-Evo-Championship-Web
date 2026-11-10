@@ -40,6 +40,9 @@ function standingsBackground(root) {
   root.classList.add("hasbg");
   const url = new URL(S.current.replace(/[^/]*$/, "") + encodeURIComponent(b.background), document.baseURI).href;       // absolute: a url() in a CSS variable is read relative to the stylesheet
   root.style.setProperty("--bgimg", `url("${url}")`);
+  const im = new Image();                          // the picture is shown whole (top to bottom), so the strip is as wide as the picture is at the page's height
+  im.onload = () => root.style.setProperty("--bgar", String(im.naturalWidth / im.naturalHeight));
+  im.src = url;
   [a0, a0 + (1 - a0) * 0.36, a0 + (1 - a0) * 0.84, 1].forEach((v, i) => root.style.setProperty("--ba" + i, v.toFixed(3)));
 }
 
@@ -160,10 +163,12 @@ function viewProgress() {
     option("drivers", "Drivers", !team), option("teams", "Teams", team));
   const { cv, chart } = chartBox(520);
   root.append(h("div", { class: "toolbar" }, field("Show:", by), field("Lines for:", top), field("View:", mode),
-    h("span", { class: "grow" }), h("button", { class: "btn", type: "button", text: "Save image", onclick: async () => {
-      const place = S.prog.by === "place";
+    h("span", { class: "grow" }), h("button", { class: "btn", type: "button", text: "Copy image", title: "Copy the chart as a picture, ready to paste", onclick: async (e) => {
+      const place = S.prog.by === "place", btn = e.currentTarget;
       const blob = await chart.png(d.name, `${place ? "Championship position" : "Championship points"} after each race  ·  ${top.options[top.selectedIndex].text.toLowerCase()}`);
-      download(slug(place ? "championship_position" : "points_progression") + ".png", blob);
+      const say = (t) => { const was = btn.textContent; btn.textContent = t; setTimeout(() => { btn.textContent = was; }, 1800); };
+      try { await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]); say("Copied"); }
+      catch (err) { download(slug(place ? "championship_position" : "points_progression") + ".png", blob); say("Saved (no clipboard)"); }       // a browser that will not copy pictures: save the file instead
     } })), h("div", { class: "chartwrap" }, cv),
     h("div", { class: "hint", text: "Hover a line, or a name in the key, to highlight it and fade the rest." }));
   function draw() {
