@@ -4,7 +4,7 @@
   --gold:#ffc83d; --silver:#a3b0c9; --bronze:#d98a4e; --purple:#b061ff; --green:#3ddc84; --blue:#4da3ff; --red:#ff5c6c;
   --hi:#ffffff; --alt:#1a1e28; --sel:#2a3350; --input:#1a1e29; --edge:#2f3548; --edge-hi:#3a4260; --btn-hover:#2a3045;
   --cell:#1b1f2b; --cell-dnf:#2a1a20; --cell-dsq:#241622; --cell-pts:#17262a; --cell-edge:#4a5272;
-  --row-sel:#222a40; --row-hover:#1f2433; --card-hover:#222839; --total:#2a1b22; --tip-bg:#161a24; --medal-ink:#10121a;
+  --row-sel:#222a40; --row-hover:#1f2433; --card-hover:#222839; --total:#2a1b22; --total-ink:#c3cada; --tip-bg:#161a24; --medal-ink:#10121a;
   color-scheme: dark;
 }
 :root[data-theme="light"] {
@@ -12,7 +12,7 @@
   --gold:#b07d00; --silver:#68718a; --bronze:#b0601a; --purple:#8639d6; --green:#168a4d; --blue:#1566c8; --red:#d62639;
   --hi:#0b0f1a; --alt:#f0f3f9; --sel:#cfdcf8; --input:#ffffff; --edge:#c2c9db; --edge-hi:#a3adc6; --btn-hover:#dde3f0;
   --cell:#eef1f8; --cell-dnf:#fde6e9; --cell-dsq:#f5e4f1; --cell-pts:#e1f4ea; --cell-edge:#98a2bd;
-  --row-sel:#d9e3fa; --row-hover:#e6ebf6; --card-hover:#eef2fb; --total:#ffe1e5; --tip-bg:#ffffff; --medal-ink:#10121a;
+  --row-sel:#d9e3fa; --row-hover:#e6ebf6; --card-hover:#eef2fb; --total:#ffe1e5; --total-ink:#3a4259; --tip-bg:#ffffff; --medal-ink:#10121a;
   color-scheme: light;
 }
 
@@ -153,7 +153,7 @@ input[type=range] { vertical-align: middle; width: 90px; accent-color: var(--acc
 .cell.dropped .cp, .cell.dropped .cs { text-decoration: underline; text-decoration-color: #ff3d4f; text-decoration-thickness: 2px; text-underline-offset: 3px; color: color-mix(in srgb, currentColor 45%, transparent); }   /* faded result, bright red line under it */
 td.link:hover .cell { border-color: var(--cell-edge); }
 .st td.tot { width: 84px; min-width: 84px; }
-.total { height: 44px; margin: 2px; border-radius: 7px; background: var(--total); display: grid; place-items: center; font-size: 19px; font-weight: 800; color: var(--hi); }
+.total { height: 44px; margin: 2px; border-radius: 7px; display: grid; place-items: center; font-size: 19px; font-weight: 800; color: var(--total-ink); }   /* a soft grey number, no box */
 .st td.stat { text-align: center; width: 62px; min-width: 62px; font-size: 13.5px; }
 .st th.stat { width: 62px; min-width: 62px; } .st th.tot { width: 84px; min-width: 84px; }
 
