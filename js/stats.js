@@ -386,6 +386,18 @@ function statsRatingsPage(races, champs) {
     h("span", { class: "hint", text: "Click a heading to sort · click a driver for their career · everyone starts on 1,000; fewer than 3 starts is provisional (grey)" })), holder);
 }
 
+/* the full standings of one championship (every driver, not only the podium) */
+function openFinalStandings(c, champs, races) {
+  const fin = c.state === "done", rows = [...c.standings].sort((a, b) => a.rank - b.rank);
+  const trs = rows.map((s) => h("tr", { class: "link", title: "Click for this driver's career", onclick: () => openCareer(champs, races, s.pid) },
+    td(s.rank, "c b " + (medalClass(s.rank) || "")), td(s.name, "b"), td(fmtPts(s.total), "c b " + (fin && s.rank === 1 ? "m1" : "")),
+    ...["wins", "podiums", "poles", "fls", "dnfs", "starts"].map((k) => td(s[k] || "-", "c " + (s[k] ? "" : "dim")))));
+  showModal(h("div", { class: "drvhead" }, h("h2", { class: "ph", text: c.name }),
+    h("div", { class: "sub", text: (fin ? "Final standings" : `Standings so far (${c.races.length} of ${c.total_races || c.races.length} races)`) + `  ·  ${rows.length} drivers` })),
+    table(["Pos", "Driver", "Points", "Wins", "Podiums", "Poles", "FL", "DNFs", "Races"], trs),
+    h("div", { class: "hint", text: "Click a driver for their career." }));
+}
+
 function statsChampionsPage(champs, races) {
   const rows = statsChampions(champs);
   const order = h("select", { "aria-label": "Order", onchange: () => draw() }, option("new", "Newest first"), option("old", "Oldest first"));
@@ -407,9 +419,11 @@ function statsChampionsPage(champs, races) {
       const rounds = `${x.rounds} round${x.rounds === 1 ? "" : "s"}` + (fin ? "" : " so far");
       const top = x.podium.map((p, k) => (p ? h("div", { class: "lc-top" },
         h("span", { class: "rk-n", style: { color: medalColor(k + 1) || cssVar("--text") }, text: String(k + 1) }),
-        h("span", { class: "link", title: "Click for this driver's career", onclick: () => openCareer(champs, races, p.pid), text: p.name }),
+        h("span", { class: "link", title: "Click for this driver's career", onclick: (e) => { e.stopPropagation(); openCareer(champs, races, p.pid); }, text: p.name }),
         h("span", { class: "dim", text: `${fmtPts(p.total)} pts` })) : null));
-      return h("div", { class: "libcard champcard" }, h("span", { class: "stripe", style: { background: color } }),
+      const rec = champs.find((c) => c.cid === x.cid);
+      return h("div", { class: "libcard champcard link", title: fin ? "Click for the full final standings" : "Click for the standings so far",
+        onclick: () => { if (rec) openFinalStandings(rec, champs, races); } }, h("span", { class: "stripe", style: { background: color } }),
         h("div", { class: "lc-main" },
           h("div", { class: "lc-head" }, h("span", { class: "lc-name", text: x.name }), h("span", { class: "badge", style: { color, borderColor: color }, text: fin ? "COMPLETE" : "LIVE" }),
             x.archived ? h("span", { class: "badge", style: { color: cssVar("--dim"), borderColor: cssVar("--dim") }, text: "ARCHIVED" }) : null),
@@ -422,7 +436,7 @@ function statsChampionsPage(champs, races) {
   }
   draw();
   return h("div", null, h("div", { class: "toolbar" }, field("Order:", order), h("span", { class: "grow" }),
-    h("span", { class: "hint", text: "Click a name for that driver's career · a championship that is still running shows who is there now" })), chips, holder);
+    h("span", { class: "hint", text: "Click a championship for its full standings · click a name for that driver's career · a championship that is still running shows who is there now" })), chips, holder);
 }
 
 function statsTracksPage(races) {
