@@ -4,7 +4,7 @@
 function standingsSub(st, team) {
   const d = S.data;
   const done = d.scored.length, all = d.cols.length;
-  const drop = d.drop_worst ? `  ·  best results count (worst ${d.drop_worst} dropped)` : "";
+  const drop = d.drop_worst ? `  ·  best results count (worst ${d.drop_worst} ${d.drop_by === "round" ? (d.drop_worst === 1 ? "round" : "rounds") : "dropped"}${d.drop_by === "round" ? " dropped" : ""})` : "";
   const best = team && d.team_best_n ? `  ·  the best ${d.team_best_n} drivers of a team score in each race` : "";
   return `${done} of ${all} races completed  ·  ${st.length} ${team ? "teams" : "drivers"}${drop}${best}`;
 }
@@ -32,9 +32,24 @@ function resultCell(c, onclick) {
   return h("td", { class: "rc" + (onclick ? " link" : ""), onclick }, cell);
 }
 
+/* the championship's background picture (a file next to its data file), soft behind the left side of the table */
+function standingsBackground(root) {
+  const b = S.data.branding;
+  if (!b || !b.background || !S.current) return;
+  const s = Math.min(100, Math.max(0, +b.strength || 50)) / 100, a0 = 1 - s;
+  root.classList.add("hasbg");
+  const url = new URL(S.current.replace(/[^/]*$/, "") + encodeURIComponent(b.background), document.baseURI).href;       // absolute: a url() in a CSS variable is read relative to the stylesheet
+  root.style.setProperty("--bgimg", `url("${url}")`);
+  const im = new Image();                          // the picture is shown whole (top to bottom), so the strip is as wide as the picture is at the page's height
+  im.onload = () => root.style.setProperty("--bgar", String(im.naturalWidth / im.naturalHeight));
+  im.src = url;
+  [a0, a0 + (1 - a0) * 0.36, a0 + (1 - a0) * 0.84, 1].forEach((v, i) => root.style.setProperty("--ba" + i, v.toFixed(3)));
+}
+
 function viewStandings() {
   const d = S.data, team = S.mode === "teams", st = d.standings[S.mode];
   const root = h("div", { class: "page" });
+  standingsBackground(root);
   const modeSel = h("select", { "aria-label": "View", onchange: () => { S.mode = modeSel.value; render(); } },
     option("drivers", "Drivers", !team), option("teams", "Teams", team));
   const holder = h("div");
@@ -105,7 +120,9 @@ function viewStandings() {
         h("td", { class: "tot" }, h("div", { class: "total", title: r.cpen ? `Includes ${fmtPts(r.cpen)} pts championship penalty` : null, text: fmtPts(r.total) })),
         ["wins", "podiums", "poles", "fls", "mls"].map((k) => h("td", { class: "stat " + (r[k] ? "" : "dim"), text: r[k] ? String(r[k]) : "-" })));
     });
-    holder.append(h("div", { class: "tablewrap standings" }, h("table", { class: "st" }, h("thead", null, r1, r2), h("tbody", null, body))));
+    const wrap = h("div", { class: "tablewrap standings" }, h("table", { class: "st" }, h("thead", null, r1, r2), h("tbody", null, body)));
+    wrap.addEventListener("scroll", () => wrap.classList.toggle("hscroll", wrap.scrollLeft > 0), { passive: true });       // sideways scroll: see the background picture rules in style.css
+    holder.append(wrap);
     applyLayout();
   }
   S.renderStandings = render;
@@ -148,10 +165,12 @@ function viewProgress() {
     option("drivers", "Drivers", !team), option("teams", "Teams", team));
   const { cv, chart } = chartBox(520);
   root.append(h("div", { class: "toolbar" }, field("Show:", by), field("Lines for:", top), field("View:", mode),
-    h("span", { class: "grow" }), h("button", { class: "btn", type: "button", text: "Save image", onclick: async () => {
-      const place = S.prog.by === "place";
+    h("span", { class: "grow" }), h("button", { class: "btn", type: "button", text: "Copy image", title: "Copy the chart as a picture, ready to paste", onclick: async (e) => {
+      const place = S.prog.by === "place", btn = e.currentTarget;
       const blob = await chart.png(d.name, `${place ? "Championship position" : "Championship points"} after each race  ·  ${top.options[top.selectedIndex].text.toLowerCase()}`);
-      download(slug(place ? "championship_position" : "points_progression") + ".png", blob);
+      const say = (t) => { const was = btn.textContent; btn.textContent = t; setTimeout(() => { btn.textContent = was; }, 1800); };
+      try { await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]); say("Copied"); }
+      catch (err) { download(slug(place ? "championship_position" : "points_progression") + ".png", blob); say("Saved (no clipboard)"); }       // a browser that will not copy pictures: save the file instead
     } })), h("div", { class: "chartwrap" }, cv),
     h("div", { class: "hint", text: "Hover a line, or a name in the key, to highlight it and fade the rest." }));
   function draw() {
