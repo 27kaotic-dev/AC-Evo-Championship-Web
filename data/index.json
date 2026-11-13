@@ -2,30 +2,30 @@
   {
     "name": "ASRNZ Evo 2026",
     "file": "data/asrnz_evo_2026.web.json",
-    "state": "live",
+    "state": "done",
     "rounds": 5,
     "races": 10,
-    "done": 8,
+    "done": 10,
     "drivers": 24,
-    "last": "R4  Red Bull Ring GP  ·  Race 2",
-    "last_date": "2026-11-05",
-    "next": "R5  Brands Hatch GP  ·  Race 1",
-    "next_date": "2026-11-12",
+    "last": "R5  Brands Hatch GP  ·  Race 2",
+    "last_date": "2026-11-12",
+    "next": "",
+    "next_date": "",
     "top": [
       [
-        "Josh McLaughlin",
-        161.0
+        "glynn dewar",
+        196.0
       ],
       [
-        "glynn dewar",
-        154.0
+        "Josh McLaughlin",
+        185.0
       ],
       [
         "steven Melling",
-        123.0
+        164.0
       ]
     ],
-    "updated": "2026-11-10",
+    "updated": "2026-11-12",
     "archived": false
   }
 ]
