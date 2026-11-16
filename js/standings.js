@@ -20,7 +20,7 @@ function resultCell(c, onclick) {
   else if (c.status === "DSQ") cls.push("dsq");
   else if (c.status === "DNS") cls.push("dns");
   else if (c.pts > 0) cls.push("pts");
-  if (c.dropped) cls.push("dropped");
+  if (c.dropped && dropsApplied()) cls.push("dropped");        // the red line only while the 'Show dropped points' box is ticked
   const statusOnly = ["DNF", "DSQ", "DNS"].includes(c.status) && c.pts === 0;
   const main = statusOnly ? h("div", { class: "cs " + (c.status === "DNS" ? "dim" : "bad"), text: c.status }) : h("div", { class: "cp", text: fmtPts(c.pts) });
   const tags = h("div", { class: "tags" });
@@ -107,7 +107,7 @@ function viewStandings() {
         return h("th", { colspan: g.cols.length, class: "rh" + (act ? " act" : ""), title: act ? "Open the round summary" : "",
           onclick: act ? () => openRound(g.round) : null }, h("div", { class: "rno", text: `R${g.round + 1}` }), h("div", { text: roundTrack(rd) }), raceResizer(g.cols.length));
       }),
-      h("th", { rowspan: 2, class: "tot", text: allOn ? "All pts" : "Points" }), ["Wins", "Podiums", "Poles", "FL", "ML"].map((x) => h("th", { rowspan: 2, class: "stat", text: x })));
+      h("th", { rowspan: 2, class: "tot" }, h("div", { text: "Points" }), canAll && !allOn ? h("div", { class: "tsub", text: "(Dropped)" }) : null), ["Wins", "Podiums", "Poles", "FL", "ML"].map((x) => h("th", { rowspan: 2, class: "stat", text: x })));
     const r2 = h("tr", null, d.cols.map((c) => h("th", { class: "rn" + (c.done ? " act" : ""), title: c.done ? "Open this race's results" : "",
       onclick: c.done ? () => openRace(c.race) : null, text: c.name })));
     const lp = {};
