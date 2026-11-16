@@ -35,6 +35,20 @@ function themeToggle() {
   return b;
 }
 
+/* 'Show dropped points': ticked = the total that counts (dropped results taken off), unticked = every result counted.
+   Only for a championship that drops results, on the Drivers view of the Standings page. */
+function dropsApplied() { try { return localStorage.getItem("apply_drops") !== "0"; } catch (e) { return true; } }
+function dropsToggle() {
+  const box = h("input", { type: "checkbox", checked: dropsApplied(), onchange: () => {
+    try { localStorage.setItem("apply_drops", box.checked ? "1" : "0"); } catch (e) { /* storage blocked */ }
+    if (S.tab === "standings" && S.redrawStandings) S.redrawStandings(); } });
+  return h("label", { class: "check", id: "dropsbox", hidden: true, title: "Only when worst results are dropped. Ticked: the points that count (dropped results taken off). Unticked: the total of every result, dropped ones included. The order of the table does not change." }, box, "Show dropped points");
+}
+function updateDropsToggle() {
+  const el = document.getElementById("dropsbox");
+  if (el) el.hidden = !(S.data && S.data.drop_worst && S.tab === "standings" && S.mode === "drivers");
+}
+
 /* ---------------------------------------------------------------- shell */
 function renderAll() {
   const app = document.getElementById("app");
@@ -43,7 +57,7 @@ function renderAll() {
   const file = h("input", { type: "file", accept: ".json,application/json", hidden: true, onchange: (e) => { if (e.target.files[0]) loadFile(e.target.files[0]); e.target.value = ""; } });
   const bar = h("header", { class: "top" },
     h("div", { class: "brand" }, h("img", { src: "icon.svg", alt: "", width: 30, height: 30 }), h("div", null, h("div", { class: "app", text: "AC EVO Championship Viewer" }), h("div", { class: "cname", text: d ? d.name : "" }))),
-    h("div", { class: "grow" }), h("button", { class: "btn", type: "button", text: "Open file…", title: "Show a championship file exported from the desktop program", onclick: () => file.click() }), file, themeToggle());
+    h("div", { class: "grow" }), dropsToggle(), h("button", { class: "btn", type: "button", text: "Open file…", title: "Show a championship file exported from the desktop program", onclick: () => file.click() }), file, themeToggle());
   const tabs = tabList();
   const nav = h("nav", { class: "tabs", role: "tablist" }, tabs.map(([id, label]) => h("button", { class: "tab" + (S.tab === id ? " on" : "") + (id === "standings" ? " sep" : ""), type: "button", role: "tab",
     "aria-selected": S.tab === id, onclick: () => setTab(id), text: label })));
@@ -59,6 +73,7 @@ function renderView() {
   if (!ids.includes(S.tab)) S.tab = ids[0];
   const views = { library: viewLibrary, stats: viewStats, progress: viewProgress, races: viewRaces, licence: viewLicence, standings: viewStandings };
   main.append(views[S.tab]());
+  updateDropsToggle();
   document.querySelectorAll(".tabs .tab").forEach((b, i) => { const on = ids[i] === S.tab; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
 }
 

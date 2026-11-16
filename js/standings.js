@@ -17,14 +17,15 @@ function resultCell(c, onclick) {
   const cls = ["cell"];
   const mc = c.pos && c.status !== "DSQ" ? medalClass(c.pos) : "";
   if (mc) cls.push(mc);
-  else if (c.status === "DNF") cls.push("dnf");
-  else if (c.status === "DSQ" || c.status === "DNS") cls.push("dsq");
+  else if (c.status === "DSQ") cls.push("dsq");
+  else if (c.status === "DNS") cls.push("dns");
   else if (c.pts > 0) cls.push("pts");
   if (c.dropped) cls.push("dropped");
   const statusOnly = ["DNF", "DSQ", "DNS"].includes(c.status) && c.pts === 0;
   const main = statusOnly ? h("div", { class: "cs " + (c.status === "DNS" ? "dim" : "bad"), text: c.status }) : h("div", { class: "cp", text: fmtPts(c.pts) });
   const tags = h("div", { class: "tags" });
   if (c.status === "DSQ" && c.pts > 0) tags.append(h("span", { class: "bad", title: "Disqualified", text: "DQ" }));
+  if (c.status === "DNF" && c.pts > 0) tags.append(h("span", { class: "bad", title: "Did not finish", text: "DNF" }));
   if (c.fl) tags.append(h("span", { class: "purple", text: "FL" }));
   if (c.pole) tags.append(h("span", { class: "blue", text: "PP" }));
   if (c.ml) tags.append(h("span", { class: "green", text: "ML" }));
@@ -58,6 +59,7 @@ function viewStandings() {
   let hideStats = pref("hide_stats", "0") === "1", raceW = Math.min(220, Math.max(64, +pref("race_col_w", 87) || 87));
   const statsToggle = h("button", { class: "btn", type: "button", title: "Hide the Wins, Podiums, Poles, FL and ML columns to make room for more races", onclick: () => {
     hideStats = !hideStats; setPref("hide_stats", hideStats ? "1" : "0"); applyLayout(); } });
+  S.redrawStandings = () => render();           // the 'Show dropped points' tick box sits in the header (app.js), next to the dark / light switch
   let nameW = +pref("name_col_w", 0) || 0;       // 0 = the default width of the Driver column
   /* drag the right edge of a heading to change the width of its column (every race column changes together); double-click puts it back */
   function grip(min, max, get, set, save, normal, span = 1) {
@@ -83,11 +85,13 @@ function viewStandings() {
   root.append(h("div", { class: "toolbar" }, h("div", { class: "grow" }, h("h2", { class: "ph", text: d.name }), h("div", { class: "sub", text: standingsSub(st, team) })),
     field("View:", modeSel), statsToggle, h("button", { class: "btn", type: "button", text: "Export CSV", onclick: () => exportStandingsCsv() }),
     discordButton(() => textStandings(S.data, S.mode))), holder,
-    h("div", { class: "hint", text: "Click the round name (top of a column) for the round summary  ·  click a race name for that race's full results  ·  click a driver for their profile  ·  click a result cell for that driver's race.   FL = fastest lap   PP = pole position   ML = most laps led   DQ = disqualified (still scores)   LP = licence points" }));
+    h("div", { class: "hint", text: "Click the round name (top of a column) for the round summary  ·  click a race name for that race's full results  ·  click a driver for their profile  ·  click a result cell for that driver's race.   FL = fastest lap   PP = pole position   ML = most laps led   DQ = disqualified (still scores)   DNF = did not finish (still scores)   LP = licence points" }));
 
   function render() {
     const t = S.mode === "teams", rows = d.standings[S.mode];
     root.querySelector(".sub").textContent = standingsSub(rows, t);
+    const canAll = !t && !!d.drop_worst, allOn = canAll && !dropsApplied();       // box unticked: every result counts
+    updateDropsToggle();
     clear(holder);
     if (!d.cols.length) { holder.append(h("div", { class: "empty", text: "This championship has no rounds yet." })); return; }
     // header: round groups over the race columns
@@ -103,7 +107,7 @@ function viewStandings() {
         return h("th", { colspan: g.cols.length, class: "rh" + (act ? " act" : ""), title: act ? "Open the round summary" : "",
           onclick: act ? () => openRound(g.round) : null }, h("div", { class: "rno", text: `R${g.round + 1}` }), h("div", { text: roundTrack(rd) }), raceResizer(g.cols.length));
       }),
-      h("th", { rowspan: 2, class: "tot", text: "Points" }), ["Wins", "Podiums", "Poles", "FL", "ML"].map((x) => h("th", { rowspan: 2, class: "stat", text: x })));
+      h("th", { rowspan: 2, class: "tot", text: allOn ? "All pts" : "Points" }), ["Wins", "Podiums", "Poles", "FL", "ML"].map((x) => h("th", { rowspan: 2, class: "stat", text: x })));
     const r2 = h("tr", null, d.cols.map((c) => h("th", { class: "rn" + (c.done ? " act" : ""), title: c.done ? "Open this race's results" : "",
       onclick: c.done ? () => openRace(c.race) : null, text: c.name })));
     const lp = {};
@@ -117,7 +121,7 @@ function viewStandings() {
           h("span", { class: "bar big", style: { background: safeColor(r.color) } }), h("span", { class: "nt" }, h("b", { text: r.name }), sub ? h("small", { text: sub }) : null),
           lp[r.id] ? h("span", { class: "lp", title: "Licence points", text: `LP ${lp[r.id]}` }) : null),
         d.cols.map((c, ci) => resultCell(r.cells[String(ci)] || (c.done && !t ? { ...DNS_CELL, dropped: (r.dropped || []).includes(ci) } : null), c.done && r.cells[String(ci)] ? () => openRace(c.race, t ? null : r.id) : null)),
-        h("td", { class: "tot" }, h("div", { class: "total", title: r.cpen ? `Includes ${fmtPts(r.cpen)} pts championship penalty` : null, text: fmtPts(r.total) })),
+        h("td", { class: "tot" }, h("div", { class: "total", title: [canAll && r.gross != null && r.gross !== r.total ? `${fmtPts(r.total)} pts counted  ·  ${fmtPts(r.gross)} pts with every result` : "", r.cpen ? `Includes ${fmtPts(r.cpen)} pts championship penalty` : ""].filter(Boolean).join("\n") || null, text: fmtPts(allOn && r.gross != null ? r.gross : r.total) })),
         ["wins", "podiums", "poles", "fls", "mls"].map((k) => h("td", { class: "stat " + (r[k] ? "" : "dim"), text: r[k] ? String(r[k]) : "-" })));
     });
     const wrap = h("div", { class: "tablewrap standings" }, h("table", { class: "st" }, h("thead", null, r1, r2), h("tbody", null, body)));
