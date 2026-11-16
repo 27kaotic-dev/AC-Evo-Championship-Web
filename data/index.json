@@ -1,6 +1,6 @@
 [
   {
-    "name": "ASRNZ Evo 2026",
+    "name": "ASRNZ s1 '26 MUSTANG CUP",
     "file": "data/asrnz_s1_26_mustang_cup.web.json",
     "state": "done",
     "rounds": 5,
@@ -25,7 +25,7 @@
         164.0
       ]
     ],
-    "updated": "2026-11-12",
+    "updated": "2026-11-16",
     "archived": false
   }
 ]
