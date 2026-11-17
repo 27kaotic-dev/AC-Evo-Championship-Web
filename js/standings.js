@@ -88,9 +88,13 @@ function viewStandings() {
     h("div", { class: "hint", text: "Click the round name (top of a column) for the round summary  ·  click a race name for that race's full results  ·  click a driver for their profile  ·  click a result cell for that driver's race.   FL = fastest lap   PP = pole position   ML = most laps led   DQ = disqualified (still scores)   DNF = did not finish (still scores)   LP = licence points" }));
 
   function render() {
-    const t = S.mode === "teams", rows = d.standings[S.mode];
-    root.querySelector(".sub").textContent = standingsSub(rows, t);
+    const t = S.mode === "teams";
+    let rows = d.standings[S.mode];
     const canAll = !t && !!d.drop_worst, allOn = canAll && !dropsApplied();       // box unticked: every result counts
+    if (allOn && rows.some((r) => r.gross != null)) {          // ... and the places follow that total too (the official order breaks a tie)
+      rows = rows.map((r, i) => ({ r, i })).sort((a, b) => (b.r.gross ?? b.r.total) - (a.r.gross ?? a.r.total) || a.i - b.i).map((x, i) => ({ ...x.r, rank: i + 1 }));
+    }
+    root.querySelector(".sub").textContent = standingsSub(rows, t);
     updateDropsToggle();
     clear(holder);
     if (!d.cols.length) { holder.append(h("div", { class: "empty", text: "This championship has no rounds yet." })); return; }
