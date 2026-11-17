@@ -155,7 +155,8 @@ input[type=range] { vertical-align: middle; width: 90px; accent-color: var(--acc
 .cell .pn { position: absolute; left: 7px; top: 3px; font-size: 9px; color: var(--dim); font-weight: 700; }
 .cell.m1 .pn, .cell.m2 .pn, .cell.m3 .pn { color: inherit; }
 .cell .tags { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column-reverse; align-items: flex-start; font-size: 9.5px; line-height: 1.15; font-weight: 400; font-family: Oxanium, "Segoe UI", Inter, system-ui, sans-serif; }
-.cell.dropped .cp, .cell.dropped .cs { text-decoration: underline; text-decoration-color: #ff3d4f; text-decoration-thickness: 2px; text-underline-offset: 3px; color: color-mix(in srgb, currentColor 45%, transparent); }   /* faded result, bright red line under it */
+.cell.dropped .cp, .cell.dropped .cs { position: relative; color: color-mix(in srgb, currentColor 45%, transparent); }   /* faded result, with a red dot to the left of it */
+.cell.dropped .cp::before, .cell.dropped .cs::before { content: ""; position: absolute; left: -10px; top: 50%; margin-top: -3px; width: 6px; height: 6px; border-radius: 50%; background: #ff3d4f; }
 td.link:hover .cell { border-color: var(--cell-edge); }
 .st td.tot { width: 84px; min-width: 84px; }
 .total { height: 44px; margin: 2px; border-radius: 7px; display: grid; place-items: center; font-size: 19px; font-weight: 800; color: var(--total-ink); border: 1.4px dashed var(--cell-dns-edge); }   /* a soft grey number in a dotted outline */
