@@ -143,7 +143,7 @@ table.st { border-collapse: separate; border-spacing: 0; width: max-content; }  
 .st td.rc { min-width: var(--rw, 87px); width: var(--rw, 87px); }
 .nostats .st .stat { display: none; }
 input[type=range] { vertical-align: middle; width: 90px; accent-color: var(--accent); }
-.cell { position: relative; height: 44px; border-radius: 7px; background: var(--cell); display: grid; place-items: center; padding-top: 6px; font-weight: 800; color: var(--dim); border: 1.4px solid transparent; margin: 2px; }
+.cell { position: relative; height: 44px; border-radius: 7px; background: var(--cell); display: grid; place-items: center; padding-top: 0; font-weight: 800; color: var(--dim); border: 1.4px solid transparent; margin: 2px; }
 .cell .cp { font-size: 17px; } .cell .cs { font-size: 13px; padding-top: 0; }
 .cell .cp, .cell .cs { font-family: Oxanium, "Segoe UI", Inter, system-ui, sans-serif; font-weight: 600; }   /* race points: semibold, Oxanium */
 .cell.pts { background: var(--cell-pts); color: var(--text); } .cell.dnf { background: var(--cell-dnf); } .cell.dsq { background: var(--cell-dsq); border-color: var(--cell-dsq-edge); }
@@ -152,7 +152,7 @@ input[type=range] { vertical-align: middle; width: 90px; accent-color: var(--acc
 .cell.m1, .cell.m2, .cell.m3 { background: color-mix(in srgb, currentColor 18%, var(--cell)); }
 .cell .pn.st2 { top: auto; bottom: 3px; }
 .cell .pn.st2.bad { color: var(--red); }
-.cell .pn { position: absolute; left: 7px; top: 3px; font-size: 10.5px; color: var(--dim); font-weight: 700; }
+.cell .pn { position: absolute; left: 7px; top: 3px; font-size: 9px; color: var(--dim); font-weight: 700; }
 .cell.m1 .pn, .cell.m2 .pn, .cell.m3 .pn { color: inherit; }
 .cell .tags { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column-reverse; align-items: flex-start; font-size: 9.5px; line-height: 1.15; font-weight: 400; font-family: Oxanium, "Segoe UI", Inter, system-ui, sans-serif; }
 .cell.dropped .cp, .cell.dropped .cs { text-decoration: underline; text-decoration-color: #ff3d4f; text-decoration-thickness: 2px; text-underline-offset: 3px; color: color-mix(in srgb, currentColor 45%, transparent); }   /* faded result, bright red line under it */
