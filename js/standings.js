@@ -24,12 +24,11 @@ function resultCell(c, onclick) {
   const statusOnly = ["DNF", "DSQ", "DNS"].includes(c.status) && c.pts === 0;
   const main = statusOnly ? h("div", { class: "cs " + (c.status === "DNS" ? "dim" : "bad"), text: c.status }) : h("div", { class: "cp", text: fmtPts(c.pts) });
   const tags = h("div", { class: "tags" });
-  if (c.status === "DSQ" && c.pts > 0) tags.append(h("span", { class: "bad", title: "Disqualified", text: "DQ" }));
-  if (c.status === "DNF" && c.pts > 0) tags.append(h("span", { class: "bad", title: "Did not finish", text: "DNF" }));
   if (c.fl) tags.append(h("span", { class: "purple", text: "FL" }));
   if (c.pole) tags.append(h("span", { class: "blue", text: "PP" }));
   if (c.ml) tags.append(h("span", { class: "green", text: "ML" }));
-  const cell = h("div", { class: cls.join(" ") }, c.pos ? h("div", { class: "pn", text: `P${c.pos}` }) : null, main, tags);
+  const cell = h("div", { class: cls.join(" ") }, c.pos ? h("div", { class: "pn", text: `P${c.pos}` }) : null,
+    c.pts > 0 && c.status === "DSQ" ? h("div", { class: "pn st2 bad", title: "Disqualified", text: "DQ" }) : c.pts > 0 && c.status === "DNF" ? h("div", { class: "pn st2 bad", title: "Did not finish", text: "DNF" }) : null, main, tags);
   return h("td", { class: "rc" + (onclick ? " link" : ""), onclick }, cell);
 }
 

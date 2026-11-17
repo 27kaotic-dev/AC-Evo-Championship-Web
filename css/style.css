@@ -150,6 +150,8 @@ input[type=range] { vertical-align: middle; width: 90px; accent-color: var(--acc
 .cell.dns { background: transparent; border: 1.4px dashed var(--cell-dns-edge); color: var(--cell-dns-ink); }
 .cell.m1 { color: var(--gold); } .cell.m2 { color: var(--silver); } .cell.m3 { color: var(--bronze); }
 .cell.m1, .cell.m2, .cell.m3 { background: color-mix(in srgb, currentColor 18%, var(--cell)); }
+.cell .pn.st2 { top: auto; bottom: 3px; }
+.cell .pn.st2.bad { color: var(--red); }
 .cell .pn { position: absolute; left: 7px; top: 3px; font-size: 10.5px; color: var(--dim); font-weight: 700; }
 .cell.m1 .pn, .cell.m2 .pn, .cell.m3 .pn { color: inherit; }
 .cell .tags { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column-reverse; align-items: flex-start; font-size: 9.5px; line-height: 1.15; font-weight: 400; font-family: Oxanium, "Segoe UI", Inter, system-ui, sans-serif; }
