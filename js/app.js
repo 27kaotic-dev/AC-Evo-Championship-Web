@@ -4,7 +4,7 @@
 
 const S = { data: null, drv: {}, races: {}, mode: "drivers", tab: "standings", sel: null, focus: null, prog: { by: "points", top: 16 }, library: [],
   recCache: {}, stats: null, statsTab: 0 };
-const VIEW_TABS = [["standings", "Standings"], ["progress", "Points progression"], ["races", "Race results"], ["licence", "Licence"]];
+const VIEW_TABS = [["standings", "Standings"], ["progress", "Points progression"], ["races", "Race results"]];       // (the licence points page is desktop only; LP still shows on the standings)
 /* the Champ Library tab (when there is more than one championship to choose from), Stats (all of them together) and, once one is open, its pages */
 function tabList() {
   const live = S.library.filter((c) => !c.archived);
@@ -71,7 +71,7 @@ function renderView() {
   clear(main);
   const ids = tabList().map((t) => t[0]);
   if (!ids.includes(S.tab)) S.tab = ids[0];
-  const views = { library: viewLibrary, stats: viewStats, progress: viewProgress, races: viewRaces, licence: viewLicence, standings: viewStandings };
+  const views = { library: viewLibrary, stats: viewStats, progress: viewProgress, races: viewRaces, standings: viewStandings };
   main.append(views[S.tab]());
   updateDropsToggle();
   document.querySelectorAll(".tabs .tab").forEach((b, i) => { const on = ids[i] === S.tab; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });

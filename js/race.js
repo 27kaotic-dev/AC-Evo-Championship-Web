@@ -288,10 +288,10 @@ function raceView(race, focusId) {
   const bits = [fmtDate(normDate(rd.date)), race.weather ? `weather: ${race.weather}` : "", `scoring: ${race.preset}`, `source: ${race.source || "manual"}`].filter(Boolean);
   const chips = h("div", { class: "chips" });
   const win = race.leader ? rowOf(race.leader) : null;
-  if (win) chips.append(chip("Winner", driverName(race.leader), cssVar("--gold")));
-  if (race.pole) chips.append(chip("Pole", driverName(race.pole), cssVar("--blue")));
-  if (race.fl) chips.append(chip("Fastest lap", `${driverName(race.fl)}  ${fmtTime(rowOf(race.fl).best)}`, cssVar("--purple")));
-  if (race.led) chips.append(chip("Most laps led", `${driverName(race.led)}  ${rowOf(race.led).led}`, cssVar("--green")));
+  if (win) chips.append(chip("Winner", driverName(race.leader)));
+  if (race.pole) chips.append(chip("Pole", driverName(race.pole)));
+  if (race.fl) chips.append(chip("Fastest lap", `${driverName(race.fl)}  ${fmtTime(rowOf(race.fl).best)}`));
+  if (race.led) chips.append(chip("Most laps led", `${driverName(race.led)}  ${rowOf(race.led).led}`));
   const nPen = S.data.penalties.filter((p) => p.race === race.id).length;
   chips.append(chip("Laps", win ? win.laps : 0), chip("Classified", race.classified),
     chip("DNF / DSQ", calc.filter((r) => r.status === "DNF" || r.status === "DSQ").length),
@@ -401,9 +401,9 @@ function roundView(rd, rdIndex) {
   const bits = [fmtDate(normDate(rd.date)), `${races.length} of ${rd.races.length} races`, "scoring: " + presets.join(", ")].filter(Boolean);
   const chips = h("div", { class: "chips" });
   if (list.length) {
-    chips.append(chip("Round leader", `${driverName(list[0].d)}  ${fmtPts(list[0].pts)} pts`, cssVar("--gold")));
+    chips.append(chip("Round leader", `${driverName(list[0].d)}  ${fmtPts(list[0].pts)} pts`));
     const fl = list.find((a) => a.best === gbest);
-    if (fl && gbest < Infinity) chips.append(chip("Fastest lap", `${driverName(fl.d)}  ${fmtTime(gbest)}`, cssVar("--purple")));
+    if (fl && gbest < Infinity) chips.append(chip("Fastest lap", `${driverName(fl.d)}  ${fmtTime(gbest)}`));
   }
   for (const race of races) if (race.leader) chips.append(chip(`${race.name} winner`, driverName(race.leader)));
   chips.append(chip("Drivers", list.length));
