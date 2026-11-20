@@ -40,9 +40,17 @@ function standingsBackground(root) {      // (root = the box that holds the tabl
   root.classList.add("hasbg");
   const url = new URL(S.current.replace(/[^/]*$/, "") + encodeURIComponent(b.background), document.baseURI).href;       // absolute: a url() in a CSS variable is read relative to the stylesheet
   root.style.setProperty("--bgimg", `url("${url}")`);
-  const im = new Image();                          // the picture is shown whole (top to bottom), so the strip is as wide as the picture is at the page's height
-  im.onload = () => root.style.setProperty("--bgar", String(im.naturalWidth / im.naturalHeight));
+  const im = new Image();                          // the picture is shown whole (top to bottom); the fade runs across the picture's own width (at most 70% of the table), like the desktop
+  let ar = 0;
+  const fit = () => {
+    if (!ar || !root.isConnected) return;
+    const hgt = Math.max(360, window.innerHeight - 160);
+    root.style.setProperty("--bgw", Math.max(1, Math.min(root.clientWidth * 0.7, hgt * ar)).toFixed(1) + "px");
+  };
+  im.onload = () => { ar = im.naturalWidth / im.naturalHeight; fit(); };
   im.src = url;
+  if (window._bgFit) window.removeEventListener("resize", window._bgFit);
+  window._bgFit = fit; window.addEventListener("resize", fit);
   [a0, a0 + (1 - a0) * 0.36, a0 + (1 - a0) * 0.84, 1].forEach((v, i) => root.style.setProperty("--ba" + i, v.toFixed(3)));
 }
 
