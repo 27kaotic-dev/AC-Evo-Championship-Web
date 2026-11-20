@@ -1,5 +1,34 @@
 [
   {
+    "name": "ASRNZ s2 '26 GERMAN TOURING LEGENDS",
+    "file": "data/asrnz_s2_26_german_touring_legends.web.json",
+    "state": "live",
+    "rounds": 5,
+    "races": 10,
+    "done": 2,
+    "drivers": 15,
+    "last": "R1  Fuji Speedway  ·  Race 2",
+    "last_date": "2026-11-19",
+    "next": "R2  OULTON PARK INTERNATIONAL  ·  Race 1",
+    "next_date": "",
+    "top": [
+      [
+        "jman jman",
+        48.0
+      ],
+      [
+        "Josh McLaughlin",
+        46.0
+      ],
+      [
+        "Leigh Perko",
+        42.0
+      ]
+    ],
+    "updated": "2026-11-20",
+    "archived": false
+  },
+  {
     "name": "ASRNZ s1 '26 MUSTANG CUP",
     "file": "data/asrnz_s1_26_mustang_cup.web.json",
     "state": "done",
