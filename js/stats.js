@@ -294,7 +294,7 @@ async function loadStatsRecords(onProgress) {
     if (onProgress) onProgress(++done, files.length);
   }
   if (S.data && !S.current) out.push(champRecord(S.data, "open file"));        // a file shown with "Open file…"
-  return out.filter((c) => c.races.length);
+  return out.filter((c) => c.races.length && c.state === "done");        // only championships that have finished count in the statistics
 }
 
 /* ---------------------------------------------------------------- the pages */
@@ -317,7 +317,7 @@ function fillStats(root, body) {
   const st = S.stats;
   clear(body);
   const sub = root.querySelector("#stats-sub");
-  if (!st.all.length) { sub.textContent = ""; body.append(h("div", { class: "empty", text: "No race results in the library yet." })); return; }
+  if (!st.all.length) { sub.textContent = ""; body.append(h("div", { class: "empty", text: "No finished championships in the library yet." })); return; }
   const champs = st.all.filter((c) => !st.sel || st.sel.has(c.cid)), races = allRaces(champs);
   const nDrv = new Set(races.flatMap((r) => r.rows.filter((w) => w.status !== "DNS").map((w) => w.pid))).size;
   const nArch = champs.filter((c) => c.archived).length;

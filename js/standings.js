@@ -33,7 +33,7 @@ function resultCell(c, onclick) {
 }
 
 /* the championship's background picture (a file next to its data file), soft behind the left side of the table */
-function standingsBackground(root) {
+function standingsBackground(root) {      // (root = the box that holds the table)
   const b = S.data.branding;
   if (!b || !b.background || !S.current) return;
   const s = Math.min(100, Math.max(0, +b.strength || 50)) / 100, a0 = 1 - s;
@@ -49,10 +49,10 @@ function standingsBackground(root) {
 function viewStandings() {
   const d = S.data, team = S.mode === "teams", st = d.standings[S.mode];
   const root = h("div", { class: "page" });
-  standingsBackground(root);
   const modeSel = h("select", { "aria-label": "View", onchange: () => { S.mode = modeSel.value; render(); } },
     option("drivers", "Drivers", !team), option("teams", "Teams", team));
   const holder = h("div");
+  standingsBackground(holder);                 // the picture starts under the table headings, not behind the title
   const pref = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } };
   const setPref = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage blocked */ } };
   let hideStats = pref("hide_stats", "0") === "1", raceW = Math.min(220, Math.max(64, +pref("race_col_w", 87) || 87));
