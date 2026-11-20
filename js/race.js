@@ -267,7 +267,7 @@ function tChart(st, mode) {
 
 /* what this race did to the driver ratings: a promise of name -> move, for the Rating column of the Result tab */
 function raceRatingMoves(race) {
-  return loadStatsRecords().then((recs) => {
+  return loadStatsRecords(null, true).then((recs) => {
     const cid = S.current ? S.current.split("/").pop() : "open file";                       // as in loadStatsRecords
     const rows = statsRatingMoves(allRaces(recs)).get(`${cid}:${S.data.rounds[race.round].id}|${race.id}`) || [];
     return new Map(rows.map((r) => [r.name, r]));

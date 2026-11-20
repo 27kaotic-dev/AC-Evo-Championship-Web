@@ -277,7 +277,7 @@ function h2hSeries(wa, wb) {
 }
 
 /* ---------------------------------------------------------------- loading every championship of the library */
-async function loadStatsRecords(onProgress) {
+async function loadStatsRecords(onProgress, includeRunning = false) {
   const out = [], seen = new Set();
   const files = S.library.map((c) => c.file);
   let done = 0;
@@ -294,7 +294,7 @@ async function loadStatsRecords(onProgress) {
     if (onProgress) onProgress(++done, files.length);
   }
   if (S.data && !S.current) out.push(champRecord(S.data, "open file"));        // a file shown with "Open file…"
-  return out.filter((c) => c.races.length && c.state === "done");        // only championships that have finished count in the statistics
+  return out.filter((c) => c.races.length && (includeRunning || c.state === "done"));        // the statistics pages only count finished championships; the race page's Rating column also needs the running ones
 }
 
 /* ---------------------------------------------------------------- the pages */
