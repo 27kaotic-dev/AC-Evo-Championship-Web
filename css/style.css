@@ -236,7 +236,7 @@ canvas.chart.pie { height: 300px; }
 /* a championship's background picture behind the left side of the Standings page, fading out to the plain page */
 :root, :root[data-theme="dark"] { --pan-rgb: 23,26,35; }
 :root[data-theme="light"] { --pan-rgb: 255,255,255; }
-.hasbg { position: relative; isolation: isolate; }
+.hasbg { position: relative; isolation: isolate; overflow: clip; }   /* the picture never shows below the table: a long table just carries on over it, a short one cuts it off */
 .hasbg { --bgh: max(360px, calc(100vh - 160px)); --bgtop: 74px; }   /* 74px = the two heading rows: the picture starts just under them */
 .hasbg::before { content: ""; display: block; position: sticky; top: 0; z-index: -1; height: var(--bgh); width: var(--bgw, 0px); margin-top: var(--bgtop); margin-bottom: calc(-1 * (var(--bgh) + var(--bgtop))); border-radius: 10px 0 0 10px; pointer-events: none;
   background: var(--bgimg) left center / auto 100% no-repeat; }
