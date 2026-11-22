@@ -151,7 +151,7 @@ function statsChampions(champs) {
 /* Driver ratings (Elo style) from the finishing order of every race, oldest first; the same rules as the desktop program's _rate.
    `since` (a date) only decides which races count for the period figures; the ratings are always worked out from the whole history. */
 const RATING = { start: 1000, k: 40, kNew: 60, newStarts: 5, provisional: 3 };
-function rateRun(races, since, moves) {
+function rateRun(races, since, moves, hist = null) {
   const d = new Map();
   for (const race of races) {
     const field = race.rows.filter((w) => w.status !== "DNS");
@@ -184,6 +184,10 @@ function rateRun(races, since, moves) {
       if (counted && a._ps === null) a._ps = before;
       a.rating += delta.get(w.pid); a.starts++;
       if (counted) { a._pn++; if (w.pos === 1 && w.status !== "DSQ") a._pw++; a._pk = a._pk === null ? a.rating : Math.max(a._pk, a.rating); }
+      if (hist) {
+        if (!hist.has(w.pid)) hist.set(w.pid, []);
+        hist.get(w.pid).push({ race, before, after: a.rating, delta: delta.get(w.pid), pos: w.status === "DSQ" ? null : w.pos, status: w.status });
+      }
       if (moves) {
         const key = `${race.round_key}|${race.rid || race.race}`;
         if (!moves.has(key)) moves.set(key, []);
@@ -204,6 +208,17 @@ function statsRatingMoves(races) {
   rateRun(races, null, moves);
   for (const rows of moves.values()) rows.sort((a, b) => ((a.pos === null) - (b.pos === null)) || ((a.pos || 0) - (b.pos || 0)) || (lc(a.name) < lc(b.name) ? -1 : 1));
   return moves;
+}
+/* every driver's rating after each race they started (pid -> [{ race, before, after, delta, pos, status }], oldest first) */
+function statsRatingHistory(races) {
+  const hist = new Map();
+  rateRun(races, null, null, hist);
+  return hist;
+}
+/* a driver's rating over one championship: what it was before the first race there, after the last, and how far it moved */
+function champRating(hist, cid, pid) {
+  const rs = (hist.get(pid) || []).filter((x) => x.race.cid === cid);
+  return rs.length ? { before: rs[0].before, after: rs[rs.length - 1].after, change: rs[rs.length - 1].after - rs[0].before } : null;
 }
 const RATING_PERIODS = [["all", "All Time"], ["3m", "Last 3 months"], ["6m", "Last 6 months"], ["1y", "Last 1 Year"]];
 function ratingSince(key) {                  // 3 months = 91 days, 6 months = 182, 1 year = 365
@@ -389,13 +404,19 @@ function statsRatingsPage(races, champs) {
 /* the full standings of one championship (every driver, not only the podium) */
 function openFinalStandings(c, champs, races) {
   const fin = c.state === "done", rows = [...c.standings].sort((a, b) => a.rank - b.rank);
-  const trs = rows.map((s) => h("tr", { class: "link", title: "Click for this driver's career", onclick: () => openCareer(champs, races, s.pid) },
-    td(s.rank, "c b " + (medalClass(s.rank) || "")), td(s.name, "b"), td(fmtPts(s.total), "c b " + (fin && s.rank === 1 ? "m1" : "")),
-    ...["wins", "podiums", "poles", "fls", "dnfs", "starts"].map((k) => td(s[k] || "-", "c " + (s[k] ? "" : "dim")))));
+  const hist = statsRatingHistory(races);                           // the rating at the end of this championship, and how far it moved during it
+  const trs = rows.map((s) => {
+    const rt = champRating(hist, c.cid, s.pid), ch = rt ? Math.floor(Math.abs(rt.change) + 0.5) : 0;
+    return h("tr", { class: "link", title: "Click for this driver's career", onclick: () => openCareer(champs, races, s.pid) },
+      td(s.rank, "c b " + (medalClass(s.rank) || "")), td(s.name, "b"), td(fmtPts(s.total), "c b " + (fin && s.rank === 1 ? "m1" : "")),
+      ...["wins", "podiums", "poles", "fls", "dnfs", "starts"].map((k) => td(s[k] || "-", "c " + (s[k] ? "" : "dim"))),
+      rt ? td(fmtRating(rt.after), "c") : td("-", "c dim"),
+      rt ? h("td", { class: "c " + (!ch ? "dim" : rt.change > 0 ? "green" : "bad"), title: `Rating ${fmtRating(rt.before)} → ${fmtRating(rt.after)} over this championship`, text: ch ? (rt.change > 0 ? "▲ " : "▼ ") + ch : "-" }) : td("-", "c dim"));
+  });
   showModal(h("div", { class: "drvhead" }, h("h2", { class: "ph", text: c.name }),
     h("div", { class: "sub", text: (fin ? "Final standings" : `Standings so far (${c.races.length} of ${c.total_races || c.races.length} races)`) + `  ·  ${rows.length} drivers` })),
-    table(["Pos", "Driver", "Points", "Wins", "Podiums", "Poles", "FL", "DNFs", "Races"], trs),
-    h("div", { class: "hint", text: "Click a driver for their career." }));
+    table(["Pos", "Driver", "Points", "Wins", "Podiums", "Poles", "FL", "DNFs", "Races", "Rating", "Change"], trs),
+    h("div", { class: "hint", text: "Click a driver for their career. Rating is the driver's rating after this championship's last race; Change is how far it moved during the championship." }));
 }
 
 function statsChampionsPage(champs, races) {
@@ -560,6 +581,29 @@ function openCareer(champs, races, pid) {
   const tabs = tabset([
     { title: "Seasons", make: () => table(["Championship", "Result", "Points", "Wins", "Podiums", "Poles", "FL", "DNFs", "Races"], seasons) },
     { title: "Tracks", make: () => table(["Track", "Starts", "Best finish", "Avg finish", "Best lap", "Car", "Last raced"], tracks) },
+    { title: "Ratings history", make: () => {
+      const rs = statsRatingHistory(races).get(pid) || [], { cv, chart } = chartBox(420);
+      if (!rs.length) { chart.setData([]); return h("div", { class: "chartwrap" }, cv); }
+      const series = [], cids = [];                                  // one line per championship, each starting where the last one ended
+      rs.forEach((x, i) => {
+        if (!cids.includes(x.race.cid)) {
+          cids.push(x.race.cid);
+          series.push({ label: x.race.champ, color: sliceColor(cids.length - 1), pts: i ? [[i, rs[i - 1].after]] : [[0, rs[0].before]], moves: [null] });
+        }
+        const s = series[series.length - 1];
+        s.pts.push([i + 1, x.after]); s.moves.push(x);
+      });
+      series.push({ label: "Starting rating (1,000)", color: cssVar("--dim"), pts: [[0, RATING.start], [rs.length, RATING.start]], moves: [null, null] });
+      const labels = { 0: "Start" };
+      rs.forEach((_, i) => { labels[i + 1] = String(i + 1); });
+      chart.setData(series, { xlabels: labels, integer: true, yfmt: fmtRating, tipfmt: (si, x, y) => {
+        const m = series[si].moves[series[si].pts.findIndex((p) => p[0] === x)];
+        if (!m) return x === 0 ? `Start   ${fmtRating(y)}` : `${fmtRating(y)}`;
+        const ch = Math.floor(Math.abs(m.delta) + 0.5);
+        return `${m.race.track} · ${m.race.race}${m.pos ? "  P" + m.pos : (m.status ? "  " + m.status : "")}   ${fmtRating(m.after)}${ch ? (m.delta > 0 ? "  ▲ " : "  ▼ ") + ch : ""}`;
+      } });
+      return h("div", { class: "chartwrap" }, cv, h("div", { class: "hint", text: "The rating after every race, race by race. A new line starts with each championship; the faint line is where everyone starts (1,000). Hover a point for the race." }));
+    } },
     { title: "Points per season", make: () => {
       const { cv, chart } = barBox();
       chart.setData(info.seasons.map((s) => ({ label: s.champ, value: s.total, color: cssVar("--accent"), tip: [s.champ, `${fmtPts(s.total)} points  ·  ${ordinal(s.rank)} of ${s.of}`] })), "No seasons yet");

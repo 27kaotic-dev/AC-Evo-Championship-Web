@@ -185,11 +185,11 @@ class LineChart {
       const [x, y] = this.hoverPt, px = mx(x), py = my(y);
       const s = this.series[hov], col = safeColor(s.color);
       const xl = this.xlabels[x] ?? String(x);
-      const line2 = `${xl}   ${o.yfmt(y)}`;
+      const line2 = o.tipfmt ? o.tipfmt(hov, x, y) : `${xl}   ${o.yfmt(y)}`;       // tipfmt(series index, x, y): a text of its own for the box
       g.font = "bold 11px 'Segoe UI', system-ui, sans-serif"; const w1 = g.measureText(s.label).width;
       g.font = "11px 'Segoe UI', system-ui, sans-serif"; const w2 = g.measureText(line2).width;
       const bw = Math.max(w1, w2) + 20, bh = 40;
-      const bx = px + 14 + bw < plot.right ? px + 14 : px - 14 - bw;
+      const bx = Math.max(2, px + 14 + bw < plot.right ? px + 14 : px - 14 - bw);       // a long box never runs off the left edge
       const by = py - bh - 10 > plot.top ? py - bh - 10 : py + 12;
       g.strokeStyle = col; g.lineWidth = 1.4; g.fillStyle = C.tip; g.beginPath(); g.roundRect(bx, by, bw, bh, 7); g.fill(); g.stroke();
       g.strokeStyle = C.hi; g.lineWidth = 1.6; g.beginPath(); g.arc(px, py, 7, 0, Math.PI * 2); g.stroke();
